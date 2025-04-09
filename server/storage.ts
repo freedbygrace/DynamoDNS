@@ -1,7 +1,4 @@
-import { randomBytes } from "crypto";
 import { 
-  users, organizations, domains, dnsRecords, 
-  providers, dnsHistory, apiTokens, 
   type User, type InsertUser, 
   type Organization, type InsertOrganization,
   type Domain, type InsertDomain,
@@ -11,9 +8,7 @@ import {
   type DnsHistory
 } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
-
-const MemoryStore = createMemoryStore(session);
+import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
   // User management
@@ -67,7 +62,7 @@ export interface IStorage {
   getDnsHistoryByDomain(domainId: number): Promise<DnsHistory[]>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 export class MemStorage implements IStorage {
@@ -88,7 +83,7 @@ export class MemStorage implements IStorage {
   private apiTokenIdCounter: number;
   private historyIdCounter: number;
   
-  public sessionStore: session.SessionStore;
+  public sessionStore: any;
 
   constructor() {
     this.usersMap = new Map();
@@ -107,9 +102,8 @@ export class MemStorage implements IStorage {
     this.apiTokenIdCounter = 1;
     this.historyIdCounter = 1;
     
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    });
+    // Session store is created in the DatabaseStorage class
+    this.sessionStore = null;
     
     // Initialize sample data
     this.initSampleData();
@@ -386,4 +380,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
