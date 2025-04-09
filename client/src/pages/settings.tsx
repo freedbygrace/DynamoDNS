@@ -53,10 +53,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Moon, Sun, Lock } from "lucide-react";
+import { Loader2, Moon, Sun, Lock, Laptop } from "lucide-react";
 
 // Organization form schema
 const organizationFormSchema = z.object({
+  name: z.string().min(1, "Organization name is required"),
+  isActive: z.boolean().default(true),
+});
+
+// Create organization form schema
+const createOrganizationFormSchema = z.object({
   name: z.string().min(1, "Organization name is required"),
   isActive: z.boolean().default(true),
 });
@@ -82,9 +88,18 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { currentOrganization, setCurrentOrganization } = useOrganization();
+  const { currentOrganization, setCurrentOrganization, createOrganizationMutation } = useOrganization();
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // Create organization form
+  const createOrganizationForm = useForm<z.infer<typeof createOrganizationFormSchema>>({
+    resolver: zodResolver(createOrganizationFormSchema),
+    defaultValues: {
+      name: "",
+      isActive: true,
+    },
+  });
   
   // Fetch organization data
   const { data: organization } = useQuery<Organization>({
@@ -434,6 +449,77 @@ export default function SettingsPage() {
             </Card>
           ) : (
             <>
+              {user?.role === "admin" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Create New Organization</CardTitle>
+                    <CardDescription>
+                      Add a new organization to your account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...createOrganizationForm}>
+                      <form 
+                        onSubmit={createOrganizationForm.handleSubmit((data) => {
+                          createOrganizationMutation.mutate(data);
+                          createOrganizationForm.reset();
+                        })} 
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={createOrganizationForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Organization Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Enter organization name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={createOrganizationForm.control}
+                          name="isActive"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Active Status</FormLabel>
+                                <FormDescription>
+                                  Enable this organization upon creation
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button 
+                          type="submit" 
+                          disabled={createOrganizationMutation.isPending}
+                        >
+                          {createOrganizationMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            "Create Organization"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              )}
+            
               <Card>
                 <CardHeader>
                   <CardTitle>Organization Details</CardTitle>
@@ -546,7 +632,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   Select your preferred theme appearance
                 </p>
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-3 gap-4 pt-2">
                   <div
                     className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer ${
                       theme === "light" ? "border-primary" : ""
@@ -569,6 +655,18 @@ export default function SettingsPage() {
                     <div className="space-y-1 text-center">
                       <h3 className="font-medium">Dark</h3>
                       <p className="text-xs text-muted-foreground">Dark background with light text</p>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer ${
+                      theme === "system" ? "border-primary" : ""
+                    }`}
+                    onClick={() => setTheme("system")}
+                  >
+                    <Laptop className="h-6 w-6 mb-3" />
+                    <div className="space-y-1 text-center">
+                      <h3 className="font-medium">System</h3>
+                      <p className="text-xs text-muted-foreground">Follow your system preference</p>
                     </div>
                   </div>
                 </div>
