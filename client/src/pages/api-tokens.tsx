@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { ApiToken, InsertApiToken, userRoles } from "@shared/schema";
+import { ApiToken, InsertApiToken, systemRoles } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/context/organization-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -337,7 +337,7 @@ export default function ApiTokensPage() {
                         Select the permissions for this token
                       </FormDescription>
                     </div>
-                    {userRoles.map((role) => (
+                    {systemRoles.map((role) => (
                       <FormField
                         key={role}
                         control={form.control}

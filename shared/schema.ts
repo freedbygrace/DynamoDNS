@@ -89,6 +89,52 @@ export const apiTokens = pgTable("api_tokens", {
   expiresAt: timestamp("expires_at"),
 });
 
+// Custom roles table for user-defined roles beyond system defaults
+export const customRoles = pgTable("custom_roles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  permissions: text("permissions").array().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
+});
+
+// Groups can contain users, organizations, or other groups
+export const groups = pgTable("groups", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
+  parentGroupId: uuid("parent_group_id"),
+});
+
+// Group members - can be users, organizations, or other groups
+export const groupMembers = pgTable("group_members", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+  // Specify the type of member: "user", "organization", or "group"
+  memberType: text("member_type").notNull(),
+  // ID of the member (user, organization, or group)
+  memberId: uuid("member_id").notNull(),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+  addedBy: uuid("added_by").notNull().references(() => users.id, { onDelete: "set null" }),
+});
+
+// Group role assignments - associates groups with roles
+export const groupRoles = pgTable("group_roles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+  // Can be either a system role (string) or a custom role ID (uuid)
+  roleId: text("role_id").notNull(),
+  // Indicates if this is a system role or a custom role
+  isSystemRole: boolean("is_system_role").notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  assignedBy: uuid("assigned_by").notNull().references(() => users.id, { onDelete: "set null" }),
+});
+
 // Schema Validation
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -140,6 +186,36 @@ export const insertApiTokenSchema = createInsertSchema(apiTokens).pick({
   expiresAt: true,
 });
 
+export const insertCustomRoleSchema = createInsertSchema(customRoles).pick({
+  name: true,
+  description: true,
+  permissions: true,
+  isActive: true,
+  createdBy: true,
+});
+
+export const insertGroupSchema = createInsertSchema(groups).pick({
+  name: true,
+  description: true,
+  isActive: true,
+  createdBy: true,
+  parentGroupId: true,
+});
+
+export const insertGroupMemberSchema = createInsertSchema(groupMembers).pick({
+  groupId: true,
+  memberType: true,
+  memberId: true,
+  addedBy: true,
+});
+
+export const insertGroupRoleSchema = createInsertSchema(groupRoles).pick({
+  groupId: true,
+  roleId: true,
+  isSystemRole: true,
+  assignedBy: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -160,10 +236,27 @@ export type InsertApiToken = z.infer<typeof insertApiTokenSchema>;
 export type ApiToken = typeof apiTokens.$inferSelect;
 
 export type DnsHistory = typeof dnsHistory.$inferSelect;
+export type CustomRole = typeof customRoles.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type GroupRole = typeof groupRoles.$inferSelect;
+
+export type InsertCustomRole = z.infer<typeof insertCustomRoleSchema>;
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
+export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
+export type InsertGroupRole = z.infer<typeof insertGroupRoleSchema>;
 
 // Role Types
-export const userRoles = ['admin', 'manager', 'user', 'readonly'] as const;
-export type UserRole = typeof userRoles[number];
+// System default roles - these will still be available alongside custom roles
+export const systemRoles = ['admin', 'manager', 'user', 'readonly'] as const;
+export type SystemRole = typeof systemRoles[number];
+
+// User roles can be system roles or custom roles
+export type UserRole = SystemRole | string;
+
+// Define member types for group members
+export const memberTypes = ['user', 'organization', 'group'] as const;
+export type MemberType = typeof memberTypes[number];
 
 // Provider Types
 export const providerTypes = ['cloudflare', 'route53', 'godaddy', 'other'] as const;
@@ -222,6 +315,54 @@ export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
   }),
   creator: one(users, {
     fields: [apiTokens.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Custom roles relations
+export const customRolesRelations = relations(customRoles, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [customRoles.createdBy],
+    references: [users.id],
+  }),
+  groupRoles: many(groupRoles),
+}));
+
+// Group relations
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [groups.createdBy],
+    references: [users.id],
+  }),
+  parentGroup: one(groups, {
+    fields: [groups.parentGroupId],
+    references: [groups.id],
+    relationName: "parentGroup",
+  }),
+  members: many(groupMembers),
+  roles: many(groupRoles),
+}));
+
+// Group members relations
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMembers.groupId],
+    references: [groups.id],
+  }),
+  addedByUser: one(users, {
+    fields: [groupMembers.addedBy],
+    references: [users.id],
+  }),
+}));
+
+// Group roles relations
+export const groupRolesRelations = relations(groupRoles, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupRoles.groupId],
+    references: [groups.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [groupRoles.assignedBy],
     references: [users.id],
   }),
 }));
