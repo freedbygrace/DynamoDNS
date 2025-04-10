@@ -204,17 +204,23 @@ export const insertDomainSchema = createInsertSchema(domains)
     providerId: z.string().uuid().optional(),
   });
 
-export const insertDnsRecordSchema = createInsertSchema(dnsRecords).pick({
-  domainId: true,
-  name: true,
-  type: true,
-  content: true,
-  ttl: true,
-  proxied: true,
-  isActive: true,
-  isAutoIP: true,
-  notes: true,
-});
+export const insertDnsRecordSchema = createInsertSchema(dnsRecords)
+  .pick({
+    domainId: true,
+    name: true,
+    type: true,
+    content: true,
+    ttl: true,
+    proxied: true,
+    isActive: true,
+    isAutoIP: true,
+    notes: true,
+    providerId: true,
+  })
+  .extend({
+    // Override providerId to make it optional
+    providerId: z.string().uuid().nullable().optional(),
+  });
 
 export const insertProviderSchema = createInsertSchema(providers).pick({
   name: true,

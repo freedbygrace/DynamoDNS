@@ -167,8 +167,12 @@ export default function DnsRecordsPage() {
     mutationFn: async (data: z.infer<typeof dnsRecordSchema>) => {
       if (!domainId) throw new Error("Domain ID is required");
       
+      // Convert empty providerId to null
+      const providerId = data.providerId === "" ? null : data.providerId;
+      
       const recordData: InsertDnsRecord = {
         ...data,
+        providerId,
         domainId,
       };
       
@@ -199,7 +203,15 @@ export default function DnsRecordsPage() {
   // Update DNS record mutation
   const updateRecordMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: z.infer<typeof dnsRecordSchema> }) => {
-      const res = await apiRequest("PUT", `/api/dns-records/${id}`, data);
+      // Convert empty providerId to null
+      const providerId = data.providerId === "" ? null : data.providerId;
+      
+      const updatedData = {
+        ...data,
+        providerId,
+      };
+      
+      const res = await apiRequest("PUT", `/api/dns-records/${id}`, updatedData);
       return await res.json();
     },
     onSuccess: () => {
@@ -724,6 +736,41 @@ export default function DnsRecordsPage() {
                     </FormControl>
                     <FormDescription>
                       Use @ for root domain or enter subdomain name
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="providerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DNS Provider</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a DNS provider" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem 
+                            key={provider.id} 
+                            value={provider.id}
+                          >
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the DNS provider to use for this record
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
