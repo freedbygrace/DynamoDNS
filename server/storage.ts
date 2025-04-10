@@ -8,7 +8,10 @@ import {
   type DnsHistory,
   type Webhook, type InsertWebhook,
   type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
-  type DnsMetric, type InsertDnsMetric
+  type DnsMetric, type InsertDnsMetric,
+  type Group, type InsertGroup,
+  type GroupMember, type InsertGroupMember,
+  type MemberType
 } from "@shared/schema";
 import session from "express-session";
 import { DatabaseStorage } from "./database-storage";
@@ -285,8 +288,9 @@ export class MemStorage implements IStorage {
       id: numId.toString(),
       name: group.name,
       description: group.description || null,
-      organizationId: group.organizationId,
       isActive: group.isActive ?? true,
+      createdBy: group.createdBy,
+      parentGroupId: group.parentGroupId || null,
       createdAt
     };
     this.groupsMap.set(numId, newGroup);
