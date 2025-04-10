@@ -183,13 +183,13 @@ export default function ApiTokensPage() {
   return (
     <MainLayout
       title="API Tokens"
-      description="Manage API tokens for programmatic access to DynamiDNS."
+      description="Manage API tokens for programmatic access to DynamoDNS."
     >
       <div className="mb-6 flex justify-between items-center">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">Your API Tokens</h2>
           <p className="text-sm text-muted-foreground">
-            Create and manage API tokens for secure access to the DynamiDNS API.
+            Create and manage API tokens for secure access to the DynamoDNS API.
           </p>
         </div>
         <Button onClick={() => setIsAddTokenDialogOpen(true)}>
@@ -303,7 +303,7 @@ export default function ApiTokensPage() {
           <DialogHeader>
             <DialogTitle>Create API Token</DialogTitle>
             <DialogDescription>
-              Generate a new API token for programmatic access to the DynamiDNS API.
+              Generate a new API token for programmatic access to the DynamoDNS API.
             </DialogDescription>
           </DialogHeader>
           
