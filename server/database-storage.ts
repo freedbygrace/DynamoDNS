@@ -1,6 +1,7 @@
 import { 
   users, organizations, domains, dnsRecords, 
   providers, dnsHistory, apiTokens, webhooks, webhookDeliveryLogs, dnsMetrics,
+  groups, groupMembers,
   type User, type InsertUser, 
   type Organization, type InsertOrganization,
   type Domain, type InsertDomain,
@@ -9,7 +10,9 @@ import {
   type ApiToken, type InsertApiToken,
   type DnsHistory, type Webhook, type InsertWebhook,
   type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
-  type DnsMetric, type InsertDnsMetric
+  type DnsMetric, type InsertDnsMetric,
+  type Group, type InsertGroup,
+  type GroupMember, type InsertGroupMember
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
@@ -89,6 +92,50 @@ export class DatabaseStorage implements IStorage {
 
   async deleteOrganization(id: string): Promise<boolean> {
     const result = await db.delete(organizations).where(eq(organizations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Group management
+  async getGroup(id: string): Promise<Group | undefined> {
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group;
+  }
+
+  async getGroups(): Promise<Group[]> {
+    return await db.select().from(groups);
+  }
+
+  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return await db.select()
+      .from(groupMembers)
+      .where(eq(groupMembers.groupId, groupId));
+  }
+
+  async createGroup(group: InsertGroup): Promise<Group> {
+    const [newGroup] = await db.insert(groups).values(group).returning();
+    return newGroup;
+  }
+
+  async updateGroup(id: string, groupData: Partial<InsertGroup>): Promise<Group | undefined> {
+    const [updatedGroup] = await db.update(groups)
+      .set(groupData)
+      .where(eq(groups.id, id))
+      .returning();
+    return updatedGroup;
+  }
+
+  async deleteGroup(id: string): Promise<boolean> {
+    const result = await db.delete(groups).where(eq(groups.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
+    const [newMember] = await db.insert(groupMembers).values(member).returning();
+    return newMember;
+  }
+
+  async removeGroupMember(id: string): Promise<boolean> {
+    const result = await db.delete(groupMembers).where(eq(groupMembers.id, id)).returning();
     return result.length > 0;
   }
 
