@@ -226,7 +226,7 @@ export class DatabaseStorage implements IStorage {
     userId?: string
   ): Promise<DnsHistory> {
     const [historyEntry] = await db.insert(dnsHistory).values({
-      record_id: recordId,
+      recordId,
       action,
       previousValue,
       newValue,
