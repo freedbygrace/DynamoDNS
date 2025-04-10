@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Domain, DnsRecord, Provider } from "@shared/schema";
+import { Domain, DnsRecord, Provider, Organization } from "@shared/schema";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainStatusCard } from "@/components/domain/domain-status-card";
 import { DomainTable } from "@/components/domain/domain-table";
@@ -7,13 +7,14 @@ import { RecentActivity } from "@/components/activity/recent-activity";
 import { DnsUpdateChart } from "@/components/charts/dns-update-chart";
 import { ProviderDistributionChart } from "@/components/charts/provider-distribution-chart";
 import { RecordTypeChart } from "@/components/charts/record-type-chart";
+import { OrganizationListCard } from "@/components/organization/organization-list-card";
 import { Button } from "@/components/ui/button";
 import { useOrganization } from "@/context/organization-context";
 import { Home, CheckCircle, AlertTriangle, AlertCircle, Plus, Wrench, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export default function DashboardPage() {
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization, organizations } = useOrganization();
 
   // Fetch domains, DNS records, and providers
   const { data: domains = [] } = useQuery<Domain[]>({
@@ -84,6 +85,11 @@ export default function DashboardPage() {
         <div className="lg:col-span-1">
           <RecentActivity />
         </div>
+      </div>
+
+      {/* Organizations List */}
+      <div className="mb-8">
+        <OrganizationListCard organizations={organizations} />
       </div>
 
       {/* Domain Status Table */}
