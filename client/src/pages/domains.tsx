@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainTable } from "@/components/domain/domain-table";
-import { Domain, InsertDomain } from "@shared/schema";
+import { Domain, InsertDomain, Provider } from "@shared/schema";
 import { useOrganization } from "@/context/organization-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
