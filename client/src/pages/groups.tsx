@@ -318,12 +318,22 @@ export default function GroupsPage() {
 
   // Form handlers
   const onCreateGroupSubmit = (data: GroupFormValues) => {
-    createGroupMutation.mutate(data);
+    // Handle "none" value for parentGroupId
+    const submissionData = {
+      ...data,
+      parentGroupId: data.parentGroupId === "none" ? undefined : data.parentGroupId
+    };
+    createGroupMutation.mutate(submissionData);
   };
 
   const onEditGroupSubmit = (data: GroupFormValues) => {
     if (selectedGroup) {
-      updateGroupMutation.mutate({ id: selectedGroup.id, data });
+      // Handle "none" value for parentGroupId
+      const submissionData = {
+        ...data,
+        parentGroupId: data.parentGroupId === "none" ? undefined : data.parentGroupId
+      };
+      updateGroupMutation.mutate({ id: selectedGroup.id, data: submissionData });
     }
   };
 
@@ -337,7 +347,7 @@ export default function GroupsPage() {
     editGroupForm.reset({
       name: group.name,
       description: group.description || "",
-      parentGroupId: group.parentGroupId || undefined,
+      parentGroupId: group.parentGroupId || "none",
     });
     setIsEditGroupOpen(true);
   };
@@ -724,7 +734,7 @@ export default function GroupsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
                             {group.name}
@@ -810,7 +820,7 @@ export default function GroupsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {availableParentGroups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
                             {group.name}
