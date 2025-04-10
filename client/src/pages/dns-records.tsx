@@ -77,6 +77,7 @@ const dnsRecordSchema = z.object({
   isActive: z.boolean().default(true),
   isAutoIP: z.boolean().default(false),
   notes: z.string().optional(),
+  providerId: z.string().uuid().optional(),
 });
 
 export default function DnsRecordsPage() {
@@ -110,6 +111,11 @@ export default function DnsRecordsPage() {
     queryKey: ["/api/dns-records", domainId],
     enabled: !!domainId,
   });
+  
+  // Fetch available providers
+  const { data: providers = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/providers"],
+  });
 
   // Form for adding/editing a DNS record
   const form = useForm<z.infer<typeof dnsRecordSchema>>({
@@ -123,6 +129,7 @@ export default function DnsRecordsPage() {
       isActive: true,
       isAutoIP: false,
       notes: "",
+      providerId: undefined,
     },
   });
 
@@ -138,6 +145,7 @@ export default function DnsRecordsPage() {
         isActive: selectedRecord.isActive,
         isAutoIP: selectedRecord.isAutoIP ?? false,
         notes: selectedRecord.notes ?? "",
+        providerId: selectedRecord.providerId,
       });
     } else {
       form.reset({
@@ -149,6 +157,7 @@ export default function DnsRecordsPage() {
         isActive: true,
         isAutoIP: false,
         notes: "",
+        providerId: undefined,
       });
     }
   }, [selectedRecord, form]);
