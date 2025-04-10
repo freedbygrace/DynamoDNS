@@ -962,6 +962,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+  
+  // Retry a failed webhook delivery
+  app.post("/api/webhook-logs/:id/retry", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const log = await storage.getWebhookDeliveryLog(req.params.id);
+      
+      if (!log) {
+        return res.status(404).json({ message: "Webhook delivery log not found" });
+      }
+      
+      // Need to get the webhook to check permissions and retry
+      const webhook = await storage.getWebhook(log.webhookId);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Associated webhook not found" });
+      }
+      
+      // Permission check
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to retry this webhook" });
+      }
+      
+      // Only retry failed deliveries
+      if (log.status) {
+        return res.status(400).json({ message: "Cannot retry successful webhook delivery" });
+      }
+      
+      // Retry the webhook with the original payload but increment retry count
+      const retrySuccess = await storage.triggerWebhook(
+        webhook.id,
+        log.payload,
+        log.retryCount + 1
+      );
+      
+      if (retrySuccess) {
+        res.status(200).json({ message: "Webhook delivery retried successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to retry webhook delivery" });
+      }
+    } catch (error) {
+      console.error("Error retrying webhook delivery:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   return httpServer;
 }
