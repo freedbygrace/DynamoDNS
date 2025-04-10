@@ -14,9 +14,12 @@ import {
   insertWebhookSchema,
   insertDnsMetricSchema,
   insertCustomRoleSchema,
+  insertGroupSchema,
+  insertGroupMemberSchema,
   recordTypes,
   providerTypes,
-  customRoles
+  customRoles,
+  memberTypes
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 
@@ -565,6 +568,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       console.error("Error deleting provider:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Groups
+  app.get("/api/groups", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const groups = await storage.getGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/groups/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const group = await storage.getGroup(id);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      
+      res.json(group);
+    } catch (error) {
+      console.error("Error fetching group:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/groups/:id/members", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const members = await storage.getGroupMembers(id);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching group members:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/groups", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const validatedData = insertGroupSchema.parse({
+        ...req.body,
+        createdBy: req.user?.id
+      });
+      const group = await storage.createGroup(validatedData);
+      res.status(201).json(group);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error creating group:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.put("/api/groups/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const validatedData = insertGroupSchema.partial().parse(req.body);
+      
+      const updatedGroup = await storage.updateGroup(id, validatedData);
+      
+      if (!updatedGroup) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      
+      res.json(updatedGroup);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error updating group:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.delete("/api/groups/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const deleted = await storage.deleteGroup(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Group Members
+  app.post("/api/group-members", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      // Validate member type
+      const memberTypeValidator = z.enum(memberTypes);
+      
+      // Extend schema with validation
+      const schema = insertGroupMemberSchema.extend({
+        memberType: memberTypeValidator
+      });
+      
+      const validatedData = schema.parse({
+        ...req.body,
+        addedBy: req.user?.id
+      });
+      
+      const member = await storage.addGroupMember(validatedData);
+      res.status(201).json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error adding group member:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.delete("/api/group-members/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const deleted = await storage.removeGroupMember(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Group member not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error removing group member:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
