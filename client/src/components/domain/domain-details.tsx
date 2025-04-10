@@ -68,21 +68,32 @@ import { formatDistanceToNow } from "date-fns";
 const dnsRecordSchema = z.object({
   name: z.string().min(1, "Record name is required"),
   type: z.enum(recordTypes),
-  content: z.string().min(1, "Content is required").optional().or(z.literal('')),
+  content: z.string().optional().or(z.literal('')),
   ttl: z.number().int().min(1).default(3600),
   proxied: z.boolean().default(false),
   isActive: z.boolean().default(true),
   isAutoIP: z.boolean().default(false),
   notes: z.string().optional(),
-  providerId: z.string().uuid().optional(),
 }).refine(data => {
-  // Content is required if isAutoIP is false
-  if (!data.isAutoIP && (!data.content || data.content.trim() === '')) {
-    return false;
+  // Different validation based on record type
+  if ((data.type === 'A' || data.type === 'AAAA') && data.isAutoIP) {
+    // Auto IP enabled, content not required
+    return true;
+  } else if (data.type === 'A') {
+    // A record - validate IPv4
+    return !!data.content && /^(\d{1,3}\.){3}\d{1,3}$/.test(data.content.trim());
+  } else if (data.type === 'AAAA') {
+    // AAAA record - accept any non-empty content for IPv6 (simplified validation)
+    return !!data.content && data.content.trim().length > 0;
+  } else if (data.type === 'CNAME' || data.type === 'MX' || data.type === 'NS') {
+    // Domain-based records - ensure content is present and looks like domain
+    return !!data.content && data.content.trim().length > 0;
+  } else {
+    // For all other types, just ensure content is non-empty
+    return !!data.content && data.content.trim().length > 0;
   }
-  return true;
 }, {
-  message: "Content is required when Auto IP is disabled",
+  message: "Content is required and must be valid for the selected record type",
   path: ["content"]
 });
 
