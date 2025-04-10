@@ -149,7 +149,7 @@ export const groups = pgTable("groups", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
-  parentGroupId: uuid("parent_group_id"),
+  parentGroupId: uuid("parent_group_id").references(() => groups.id, { onDelete: "set null" }),
 });
 
 // Group members - can be users, organizations, or other groups
