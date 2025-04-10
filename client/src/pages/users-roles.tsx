@@ -314,7 +314,7 @@ export default function UsersRolesPage() {
         <CardHeader>
           <CardTitle>Role Permissions</CardTitle>
           <CardDescription>
-            Understanding the different access levels in DynamiDNS
+            Understanding the different access levels in DynamoDNS
           </CardDescription>
         </CardHeader>
         <CardContent>
