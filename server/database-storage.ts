@@ -101,6 +101,7 @@ export class DatabaseStorage implements IStorage {
           id, 
           name, 
           organization_id as "organizationId", 
+          provider_id as "providerId",
           is_active as "isActive", 
           created_at as "createdAt"
         FROM domains 
@@ -121,7 +122,7 @@ export class DatabaseStorage implements IStorage {
         organizationId: row.organizationId as string,
         isActive: Boolean(row.isActive),
         createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
-        providerId: '', // Default value for expected field
+        providerId: row.providerId as string || '', // Use providerId from the database
         lastUpdated: null // Default value for expected field
       };
     } catch (error) {
@@ -285,6 +286,7 @@ export class DatabaseStorage implements IStorage {
           id, 
           name, 
           organization_id as "organizationId", 
+          provider_id as "providerId",
           is_active as "isActive", 
           created_at as "createdAt"
       `;
@@ -304,7 +306,7 @@ export class DatabaseStorage implements IStorage {
         organizationId: row.organizationId as string,
         isActive: Boolean(row.isActive),
         createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
-        providerId: existingDomain.providerId || '', // Keep existing value
+        providerId: row.providerId as string || '', // Use providerId from the database
         lastUpdated: new Date() // Use current date for lastUpdated
       };
     } catch (error) {
