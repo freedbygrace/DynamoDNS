@@ -82,6 +82,7 @@ export default function DomainsPage() {
     resolver: zodResolver(domainFormSchema),
     defaultValues: {
       name: "",
+      providerId: undefined, // Explicitly set undefined to avoid empty string
       isActive: true,
     },
   });
@@ -89,10 +90,20 @@ export default function DomainsPage() {
   // Add domain mutation
   const addDomainMutation = useMutation({
     mutationFn: async (data: z.infer<typeof domainFormSchema>) => {
+      // Prepare domain data with organizationId
       const domainData: InsertDomain = {
         ...data,
         organizationId: currentOrganization?.id || "",
       };
+      
+      // Add special handling for providerId
+      // If providerId is an empty string or undefined, remove it completely
+      // This ensures we don't send empty string which causes backend validation issues
+      if (!domainData.providerId || domainData.providerId === "") {
+        delete domainData.providerId; // Remove instead of setting to null to avoid type issues
+      }
+      
+      console.log("Submitting domain with provider:", domainData.providerId);
       
       const res = await apiRequest("POST", "/api/domains", domainData);
       return await res.json();

@@ -44,8 +44,13 @@ export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: Dom
   });
 
   const getProviderName = (providerId: string | null | undefined) => {
+    // Add enhanced debugging to help track down the issue
+    console.log("Provider lookup - ID provided:", providerId, typeof providerId);
+    console.log("Available providers:", providers.map(p => ({ id: p.id, name: p.name })));
+    
     // Handle completely empty providerId cases
-    if (!providerId || providerId === "") {
+    if (providerId === null || providerId === undefined || providerId === "") {
+      console.log("Provider is empty/null");
       return "None";
     }
     
@@ -54,8 +59,10 @@ export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: Dom
     const provider = providers.find(p => p.id === providerId);
     
     if (provider) {
+      console.log("Found provider:", provider.name);
       return provider.name;
     } else {
+      console.log("Provider not found for ID:", providerId);
       // If we have a providerId but can't find the provider (might be deleted)
       return "Unknown Provider";
     }
