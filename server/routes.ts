@@ -10,6 +10,7 @@ import {
   insertApiTokenSchema,
   insertOrganizationSchema,
   insertWebhookSchema,
+  insertDnsMetricSchema,
   recordTypes,
   providerTypes
 } from "@shared/schema";
