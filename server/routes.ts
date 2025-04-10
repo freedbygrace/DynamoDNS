@@ -190,7 +190,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/domains", requireRole(["admin", "manager"]), async (req, res) => {
     try {
-      const validatedData = insertDomainSchema.parse(req.body);
+      // Create a custom validation schema for the API that makes providerId optional
+      const domainSchema = z.object({
+        name: z.string(),
+        organizationId: z.string().uuid(),
+        providerId: z.string().uuid().optional(),
+        isActive: z.boolean().optional().default(true)
+      });
+      
+      const validatedData = domainSchema.parse(req.body);
       const domain = await storage.createDomain(validatedData);
       res.status(201).json(domain);
     } catch (error) {

@@ -191,12 +191,17 @@ export const insertOrganizationSchema = createInsertSchema(organizations).pick({
   isActive: true,
 });
 
-export const insertDomainSchema = createInsertSchema(domains).pick({
-  name: true,
-  organizationId: true,
-  providerId: true,
-  isActive: true,
-});
+export const insertDomainSchema = createInsertSchema(domains)
+  .pick({
+    name: true,
+    organizationId: true,
+    providerId: true,
+    isActive: true,
+  })
+  .extend({
+    // Override providerId to make it optional
+    providerId: z.string().uuid().optional(),
+  });
 
 export const insertDnsRecordSchema = createInsertSchema(dnsRecords).pick({
   domainId: true,
