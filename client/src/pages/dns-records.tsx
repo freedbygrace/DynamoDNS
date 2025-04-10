@@ -475,7 +475,7 @@ export default function DnsRecordsPage() {
 
       {/* Add Record Dialog */}
       <Dialog open={isAddRecordDialogOpen} onOpenChange={setIsAddRecordDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add DNS Record</DialogTitle>
             <DialogDescription>
@@ -715,7 +715,7 @@ export default function DnsRecordsPage() {
 
       {/* Edit Record Dialog */}
       <Dialog open={isEditRecordDialogOpen} onOpenChange={setIsEditRecordDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit DNS Record</DialogTitle>
             <DialogDescription>
@@ -955,7 +955,7 @@ export default function DnsRecordsPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
