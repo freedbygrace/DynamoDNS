@@ -14,6 +14,8 @@ import {
   Settings,
   CreditCard,
   LogOut,
+  Webhook,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -67,6 +69,18 @@ export function Sidebar() {
       href: "/users-roles",
       icon: <Users className="w-5 h-5 mr-3" />,
       roles: ["admin"],
+    },
+    {
+      title: "Webhooks",
+      href: "/webhooks",
+      icon: <Webhook className="w-5 h-5 mr-3" />,
+      roles: ["admin", "manager"],
+    },
+    {
+      title: "Webhook Logs",
+      href: "/webhook-logs",
+      icon: <ClipboardList className="w-5 h-5 mr-3" />,
+      roles: ["admin", "manager"],
     },
     {
       title: "Providers",
