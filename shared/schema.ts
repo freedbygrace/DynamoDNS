@@ -1,24 +1,24 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, foreignKey, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, serial, boolean, timestamp, jsonb, foreignKey, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Users & Authentication
 export const organizations = pgTable("organizations", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
   fullName: text("full_name"),
   role: text("role").default("user").notNull(),
-  organizationId: integer("organization_id").references(() => organizations.id, { onDelete: "set null" }),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -33,7 +33,7 @@ export const usersRelations = relations(users, ({ one }) => ({
 
 // DNS Management
 export const providers = pgTable("providers", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(),
   credentials: jsonb("credentials"),
@@ -42,18 +42,18 @@ export const providers = pgTable("providers", {
 });
 
 export const domains = pgTable("domains", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  providerId: integer("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true).notNull(),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const dnsRecords = pgTable("dns_records", {
-  id: serial("id").primaryKey(),
-  domainId: integer("domain_id").notNull().references(() => domains.id, { onDelete: "cascade" }),
+  id: uuid("id").defaultRandom().primaryKey(),
+  domainId: uuid("domain_id").notNull().references(() => domains.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   type: text("type").notNull(),
   content: text("content").notNull(),
@@ -67,23 +67,23 @@ export const dnsRecords = pgTable("dns_records", {
 });
 
 export const dnsHistory = pgTable("dns_history", {
-  id: serial("id").primaryKey(),
-  recordId: integer("record_id").notNull().references(() => dnsRecords.id, { onDelete: "cascade" }),
+  id: uuid("id").defaultRandom().primaryKey(),
+  recordId: uuid("record_id").notNull().references(() => dnsRecords.id, { onDelete: "cascade" }),
   action: text("action").notNull(),
   previousValue: text("previous_value"),
   newValue: text("new_value"),
-  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
 // API Tokens
 export const apiTokens = pgTable("api_tokens", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   token: text("token").notNull().unique(),
-  organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   permissions: text("permissions").array(),
-  createdBy: integer("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at"),
