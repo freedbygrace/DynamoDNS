@@ -12,6 +12,16 @@ export function PublicIpCard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Function to validate if a string is a valid IPv6 address
+  const isValidIPv6 = (ip: string | null): boolean => {
+    if (!ip) return false;
+    
+    // Basic IPv6 format check using regex
+    const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+    
+    return ipv6Regex.test(ip);
+  };
+
   useEffect(() => {
     const fetchPublicIp = async () => {
       try {
@@ -28,7 +38,15 @@ export function PublicIpCard() {
           .catch(() => ({ ip: null }));
 
         setIpv4(ipv4Response.ip);
-        setIpv6(ipv6Response.ip);
+        
+        // Validate that the IPv6 response is actually an IPv6 address
+        const ipv6Address = ipv6Response.ip;
+        if (isValidIPv6(ipv6Address)) {
+          setIpv6(ipv6Address);
+        } else {
+          setIpv6(null); // Not a valid IPv6 address
+        }
+        
         setError(false);
       } catch (err) {
         console.error('Error fetching public IP:', err);
@@ -91,7 +109,7 @@ export function PublicIpCard() {
               )}
             </div>
             <div className="bg-card border rounded-md p-3 text-sm font-mono">
-              {loading ? 'Loading...' : error ? 'Error fetching IP' : ipv4 || 'N/A'}
+              {loading ? 'Loading...' : error ? 'Error fetching IP' : ipv4 || 'Not Available'}
             </div>
           </div>
 
@@ -112,7 +130,7 @@ export function PublicIpCard() {
               )}
             </div>
             <div className="bg-card border rounded-md p-3 text-sm font-mono overflow-x-auto">
-              {loading ? 'Loading...' : error ? 'Error fetching IP' : ipv6 || 'N/A'}
+              {loading ? 'Loading...' : error ? 'Error fetching IP' : ipv6 || 'Not Available'}
             </div>
           </div>
         </div>
