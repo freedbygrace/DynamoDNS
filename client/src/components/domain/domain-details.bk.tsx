@@ -489,6 +489,41 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
               
               <FormField
                 control={form.control}
+                name="providerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DNS Provider</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a DNS provider" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem 
+                            key={provider.id} 
+                            value={provider.id}
+                          >
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the DNS provider to use for this record
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
@@ -514,28 +549,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       </SelectContent>
                     </Select>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Moved proxied toggle above isAutoIP */}
-              <FormField
-                control={form.control}
-                name="proxied"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Proxied</FormLabel>
-                      <FormDescription>
-                        Enable proxying through CDN (Cloudflare only)
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -571,10 +584,14 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <FormItem>
                       <FormLabel>Content</FormLabel>
                       <FormControl>
-                        <Input placeholder="Record value" {...field} />
+                        <Input placeholder="192.168.1.1, example.com, etc" {...field} />
                       </FormControl>
                       <FormDescription>
-                        The content of the DNS record (e.g. IP address, domain name)
+                        {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
+                        {form.watch("type") === "AAAA" && "IPv6 address"}
+                        {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
+                        {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
+                        {form.watch("type") === "TXT" && "Text content"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -591,15 +608,36 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <FormControl>
                       <Input 
                         type="number" 
-                        min={1} 
                         {...field} 
-                        onChange={e => field.onChange(parseInt(e.target.value))}
+                        value={field.value}
+                        onChange={e => field.onChange(parseInt(e.target.value || "3600"))}
                       />
                     </FormControl>
                     <FormDescription>
-                      Time to live in seconds, how long DNS servers should cache this record
+                      Time-to-live in seconds. 3600 = 1 hour
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="proxied"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Proxied</FormLabel>
+                      <FormDescription>
+                        Enable proxying through CDN (Cloudflare only)
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -612,7 +650,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Active</FormLabel>
                       <FormDescription>
-                        Enable or disable this DNS record
+                        Enable this record to be used
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -635,7 +673,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       <Input placeholder="Optional notes about this record" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Add optional notes about this record (for internal reference only)
+                      Add any additional information about this record
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -644,27 +682,24 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
               
               <DialogFooter>
                 <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsAddRecordDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
+                  type="submit" 
                   disabled={addRecordMutation.isPending}
                 >
-                  {addRecordMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {addRecordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Record"
                   )}
-                  Add Record
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Edit Record Dialog */}
       <Dialog open={isEditRecordDialogOpen} onOpenChange={setIsEditRecordDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -696,6 +731,41 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
               
               <FormField
                 control={form.control}
+                name="providerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DNS Provider</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a DNS provider" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem 
+                            key={provider.id} 
+                            value={provider.id}
+                          >
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the DNS provider to use for this record
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
@@ -721,28 +791,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       </SelectContent>
                     </Select>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Moved proxied toggle above isAutoIP */}
-              <FormField
-                control={form.control}
-                name="proxied"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Proxied</FormLabel>
-                      <FormDescription>
-                        Enable proxying through CDN (Cloudflare only)
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -778,10 +826,14 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <FormItem>
                       <FormLabel>Content</FormLabel>
                       <FormControl>
-                        <Input placeholder="Record value" {...field} />
+                        <Input placeholder="192.168.1.1, example.com, etc" {...field} />
                       </FormControl>
                       <FormDescription>
-                        The content of the DNS record (e.g. IP address, domain name)
+                        {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
+                        {form.watch("type") === "AAAA" && "IPv6 address"}
+                        {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
+                        {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
+                        {form.watch("type") === "TXT" && "Text content"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -798,15 +850,36 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <FormControl>
                       <Input 
                         type="number" 
-                        min={1} 
                         {...field} 
-                        onChange={e => field.onChange(parseInt(e.target.value))}
+                        value={field.value}
+                        onChange={e => field.onChange(parseInt(e.target.value || "3600"))}
                       />
                     </FormControl>
                     <FormDescription>
-                      Time to live in seconds, how long DNS servers should cache this record
+                      Time-to-live in seconds. 3600 = 1 hour
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="proxied"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Proxied</FormLabel>
+                      <FormDescription>
+                        Enable proxying through CDN (Cloudflare only)
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -819,7 +892,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Active</FormLabel>
                       <FormDescription>
-                        Enable or disable this DNS record
+                        Enable this record to be used
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -842,7 +915,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       <Input placeholder="Optional notes about this record" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Add optional notes about this record (for internal reference only)
+                      Add any additional information about this record
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -851,63 +924,53 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
               
               <DialogFooter>
                 <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsEditRecordDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
+                  type="submit" 
                   disabled={updateRecordMutation.isPending}
                 >
-                  {updateRecordMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {updateRecordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Record"
                   )}
-                  Update Record
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the DNS record "{selectedRecord?.name}" 
-              of type {selectedRecord?.type}. This action cannot be undone.
+              This will permanently delete the DNS record <strong>{selectedRecord?.name}</strong> of type <strong>{selectedRecord?.type}</strong>. 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={confirmDeleteRecord}
-              className="bg-destructive text-destructive-foreground"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteRecordMutation.isPending}
             >
-              {deleteRecordMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {deleteRecordMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
               )}
-              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Back Button */}
-      {onBack && (
-        <div className="mt-6">
-          <Button 
-            variant="outline" 
-            onClick={onBack}
-          >
-            Back to Domains
-          </Button>
-        </div>
-      )}
     </>
   );
 }
