@@ -118,6 +118,18 @@ export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Performance metrics for historical data and trends
+export const dnsMetrics = pgTable("dns_metrics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  domainId: uuid("domain_id").references(() => domains.id, { onDelete: "cascade" }),
+  recordId: uuid("record_id").references(() => dnsRecords.id, { onDelete: "cascade" }),
+  metricType: text("metric_type").notNull(), // response_time, uptime, propagation, etc.
+  value: jsonb("value").notNull(), // Flexible metric value storage
+  source: text("source"), // Source of the metric (provider, third-party, etc.)
+  tags: text("tags").array(), // For additional filtering/grouping
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
 // Custom roles table for user-defined roles beyond system defaults
 export const customRoles = pgTable("custom_roles", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -267,6 +279,15 @@ export const insertWebhookDeliveryLogSchema = createInsertSchema(webhookDelivery
   retryCount: true,
 });
 
+export const insertDnsMetricSchema = createInsertSchema(dnsMetrics).pick({
+  domainId: true,
+  recordId: true,
+  metricType: true,
+  value: true,
+  source: true,
+  tags: true,
+});
+
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -288,6 +309,7 @@ export type InsertApiToken = z.infer<typeof insertApiTokenSchema>;
 export type ApiToken = typeof apiTokens.$inferSelect;
 
 export type DnsHistory = typeof dnsHistory.$inferSelect;
+export type DnsMetric = typeof dnsMetrics.$inferSelect;
 export type CustomRole = typeof customRoles.$inferSelect;
 export type Group = typeof groups.$inferSelect;
 export type GroupMember = typeof groupMembers.$inferSelect;
@@ -301,6 +323,7 @@ export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhookDeliveryLog = z.infer<typeof insertWebhookDeliveryLogSchema>;
 export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;
+export type InsertDnsMetric = z.infer<typeof insertDnsMetricSchema>;
 
 // Role Types
 // System default roles - these will still be available alongside custom roles
@@ -358,6 +381,17 @@ export const dnsHistoryRelations = relations(dnsHistory, ({ one }) => ({
   user: one(users, {
     fields: [dnsHistory.userId],
     references: [users.id],
+  }),
+}));
+
+export const dnsMetricsRelations = relations(dnsMetrics, ({ one }) => ({
+  domain: one(domains, {
+    fields: [dnsMetrics.domainId],
+    references: [domains.id],
+  }),
+  record: one(dnsRecords, {
+    fields: [dnsMetrics.recordId],
+    references: [dnsRecords.id],
   }),
 }));
 
