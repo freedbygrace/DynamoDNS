@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 interface RecentActivityProps {
-  domainId?: number;
+  domainId?: string;
 }
 
 export function RecentActivity({ domainId }: RecentActivityProps) {

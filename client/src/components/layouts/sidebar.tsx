@@ -114,19 +114,21 @@ export function Sidebar() {
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <a
-              className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                location === item.href
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              {item.icon}
-              {item.title}
-            </a>
-          </Link>
+          <div key={item.href}>
+            <Link href={item.href}>
+              <div
+                className={cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
+                  location === item.href
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                {item.icon}
+                {item.title}
+              </div>
+            </Link>
+          </div>
         ))}
         
         {filteredAdminItems.length > 0 && (
@@ -135,19 +137,21 @@ export function Sidebar() {
               Administration
             </div>
             {filteredAdminItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <a
-                  className={cn(
-                    "mt-1 flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                    location === item.href
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {item.icon}
-                  {item.title}
-                </a>
-              </Link>
+              <div key={item.href}>
+                <Link href={item.href}>
+                  <div
+                    className={cn(
+                      "mt-1 flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
+                      location === item.href
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    {item.icon}
+                    {item.title}
+                  </div>
+                </Link>
+              </div>
             ))}
           </div>
         )}
