@@ -49,9 +49,7 @@ import { Loader2 } from "lucide-react";
 // Domain form schema
 const domainFormSchema = z.object({
   name: z.string().min(3, "Domain name must be at least 3 characters"),
-  providerId: z.number({
-    required_error: "Please select a DNS provider",
-  }),
+  providerId: z.string().uuid().optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -88,7 +86,7 @@ export default function DomainsPage() {
     mutationFn: async (data: z.infer<typeof domainFormSchema>) => {
       const domainData: InsertDomain = {
         ...data,
-        organizationId: currentOrganization?.id || 0,
+        organizationId: currentOrganization?.id || "",
       };
       
       const res = await apiRequest("POST", "/api/domains", domainData);
@@ -114,7 +112,7 @@ export default function DomainsPage() {
 
   // Delete domain mutation
   const deleteDomainMutation = useMutation({
-    mutationFn: async (domainId: number) => {
+    mutationFn: async (domainId: string) => {
       await apiRequest("DELETE", `/api/domains/${domainId}`);
     },
     onSuccess: () => {
@@ -209,8 +207,8 @@ export default function DomainsPage() {
                   <FormItem>
                     <FormLabel>DNS Provider</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(value)}
+                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
