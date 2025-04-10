@@ -13,6 +13,7 @@ import ApiTokensPage from "@/pages/api-tokens";
 import UsersRolesPage from "@/pages/users-roles";
 import ProvidersPage from "@/pages/providers";
 import SettingsPage from "@/pages/settings";
+import OrganizationsPage from "@/pages/organizations";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -23,6 +24,7 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
+      <ProtectedRoute path="/organizations" component={OrganizationsPage} />
       <ProtectedRoute path="/domains" component={DomainsPage} />
       <ProtectedRoute path="/dns-records" component={DnsRecordsPage} />
       <ProtectedRoute path="/metrics" component={MetricsPage} />
