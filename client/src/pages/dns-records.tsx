@@ -163,6 +163,9 @@ export default function DnsRecordsPage() {
         domainId,
       };
       
+      // For debugging
+      console.log("Adding DNS record:", recordData);
+      
       const res = await apiRequest("POST", "/api/dns-records", recordData);
       return await res.json();
     },
@@ -455,7 +458,7 @@ export default function DnsRecordsPage() {
           <DialogHeader>
             <DialogTitle>Add DNS Record</DialogTitle>
             <DialogDescription>
-              Add a new DNS record to {domain?.name || 'your domain'}.
+              Add a new DNS record to {domain?.name ? domain.name : 'your domain'}.
             </DialogDescription>
           </DialogHeader>
           
@@ -660,7 +663,7 @@ export default function DnsRecordsPage() {
           <DialogHeader>
             <DialogTitle>Edit DNS Record</DialogTitle>
             <DialogDescription>
-              Update the DNS record for {domain?.name || 'your domain'}.
+              Update the DNS record for {domain?.name ? domain.name : 'your domain'}.
             </DialogDescription>
           </DialogHeader>
           
