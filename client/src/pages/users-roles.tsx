@@ -76,7 +76,7 @@ const userFormSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
-  role: z.enum(systemRoles as [string, ...string[]]),
+  role: z.enum(systemRoles as unknown as [string, ...string[]]),
   organizationId: z.number().optional(),
 });
 
@@ -119,7 +119,7 @@ export default function UsersRolesPage() {
   // Form for editing a user's role
   const editRoleForm = useForm<{ role: UserRole }>({
     resolver: zodResolver(z.object({
-      role: z.enum(systemRoles as [string, ...string[]]),
+      role: z.enum(systemRoles as unknown as [string, ...string[]]),
     })),
     defaultValues: {
       role: "user",
