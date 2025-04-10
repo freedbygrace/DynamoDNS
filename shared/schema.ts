@@ -89,6 +89,20 @@ export const apiTokens = pgTable("api_tokens", {
   expiresAt: timestamp("expires_at"),
 });
 
+// Webhooks
+export const webhooks = pgTable("webhooks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  secret: text("secret"),
+  events: text("events").array().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastTriggered: timestamp("last_triggered"),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Custom roles table for user-defined roles beyond system defaults
 export const customRoles = pgTable("custom_roles", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -216,6 +230,15 @@ export const insertGroupRoleSchema = createInsertSchema(groupRoles).pick({
   assignedBy: true,
 });
 
+export const insertWebhookSchema = createInsertSchema(webhooks).pick({
+  name: true,
+  url: true,
+  organizationId: true,
+  secret: true,
+  events: true,
+  isActive: true,
+  createdBy: true,
+});
 
 
 // Types
@@ -247,6 +270,8 @@ export type InsertCustomRole = z.infer<typeof insertCustomRoleSchema>;
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
 export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
 export type InsertGroupRole = z.infer<typeof insertGroupRoleSchema>;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
 
 // Role Types
 // System default roles - these will still be available alongside custom roles
@@ -273,6 +298,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
   domains: many(domains),
   apiTokens: many(apiTokens),
+  webhooks: many(webhooks),
 }));
 
 export const domainsRelations = relations(domains, ({ one, many }) => ({
@@ -321,6 +347,16 @@ export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
   }),
 }));
 
+export const webhooksRelations = relations(webhooks, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [webhooks.organizationId],
+    references: [organizations.id],
+  }),
+  creator: one(users, {
+    fields: [webhooks.createdBy],
+    references: [users.id],
+  }),
+}));
 
 
 // Custom roles relations
