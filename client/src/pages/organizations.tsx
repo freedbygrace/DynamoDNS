@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Users, Plus, Edit, Trash2, Building, Calendar, Clock, Info, AlertCircle } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,15 @@ import {
 
 export default function OrganizationsPage() {
   const { user } = useAuth();
-  const { organizations, currentOrganization, setCurrentOrganization, createOrganizationMutation } = useOrganization();
+  const { 
+    organizations, 
+    currentOrganization, 
+    setCurrentOrganization, 
+    createOrganizationMutation,
+    updateOrganizationMutation,
+    deleteOrganizationMutation,
+    domainsByOrganization
+  } = useOrganization();
   const { toast } = useToast();
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgActive, setNewOrgActive] = useState(true);
@@ -175,7 +184,8 @@ export default function OrganizationsPage() {
                 className="text-muted-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // View organization details
+                  setSelectedOrg(org);
+                  setIsViewDialogOpen(true);
                 }}
               >
                 View Details
@@ -189,7 +199,10 @@ export default function OrganizationsPage() {
                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Edit organization
+                      setSelectedOrg(org);
+                      setEditOrgName(org.name);
+                      setEditOrgActive(org.isActive);
+                      setIsEditDialogOpen(true);
                     }}
                   >
                     <Edit className="h-4 w-4" />
@@ -200,7 +213,8 @@ export default function OrganizationsPage() {
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Delete organization
+                      setSelectedOrg(org);
+                      setIsDeleteDialogOpen(true);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -231,6 +245,159 @@ export default function OrganizationsPage() {
           </div>
         </Card>
       )}
+
+      {/* View Organization Dialog */}
+      <AlertDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Organization Details</AlertDialogTitle>
+            <AlertDialogDescription>
+              View details for this organization.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            {selectedOrg && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Name</h4>
+                    <p className="text-sm">{selectedOrg.name}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Status</h4>
+                    <p className="text-sm">
+                      {selectedOrg.isActive ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50 hover:text-green-700">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50 hover:text-red-700">
+                          Inactive
+                        </Badge>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Created</h4>
+                  <p className="text-sm">{new Date(selectedOrg.createdAt).toLocaleDateString()}</p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Domains</h4>
+                  {/* Check if domain data is available for this org */}
+                  {selectedOrg.id in (domainsByOrganization || {}) && domainsByOrganization[selectedOrg.id]?.length > 0 ? (
+                    <ul className="text-sm space-y-1 list-disc list-inside">
+                      {domainsByOrganization[selectedOrg.id]?.map(domain => (
+                        <li key={domain.id}>{domain.name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No domains associated with this organization.</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Organization Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Organization</DialogTitle>
+            <DialogDescription>
+              Make changes to the organization details.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!editOrgName.trim()) {
+              toast({
+                title: 'Error',
+                description: 'Organization name cannot be empty',
+                variant: 'destructive',
+              });
+              return;
+            }
+            
+            if (selectedOrg) {
+              // Use the updateOrganizationMutation from context
+              updateOrganizationMutation.mutate({
+                id: selectedOrg.id,
+                data: {
+                  name: editOrgName,
+                  isActive: editOrgActive,
+                }
+              });
+              
+              setIsEditDialogOpen(false);
+            }
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="editOrgName">Organization Name</Label>
+                <Input
+                  id="editOrgName"
+                  value={editOrgName}
+                  onChange={(e) => setEditOrgName(e.target.value)}
+                  placeholder="Enter organization name"
+                  required
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="editIsActive"
+                  checked={editOrgActive}
+                  onCheckedChange={(checked) => setEditOrgActive(checked as boolean)}
+                />
+                <Label htmlFor="editIsActive">Active</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={updateOrganizationMutation.isPending}
+              >
+                {updateOrganizationMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Organization Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the organization 
+              {selectedOrg && <strong> "{selectedOrg.name}"</strong>} and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={deleteOrganizationMutation.isPending}
+              onClick={() => {
+                if (selectedOrg) {
+                  deleteOrganizationMutation.mutate(selectedOrg.id);
+                  setIsDeleteDialogOpen(false);
+                }
+              }}
+            >
+              {deleteOrganizationMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
