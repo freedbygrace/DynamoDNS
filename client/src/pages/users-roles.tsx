@@ -77,7 +77,7 @@ const userFormSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
   role: z.enum(systemRoles as unknown as [string, ...string[]]),
-  organizationId: z.number().optional(),
+  organizationId: z.string().optional(),
 });
 
 export default function UsersRolesPage() {
@@ -152,7 +152,7 @@ export default function UsersRolesPage() {
 
   // Update user role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: number, role: UserRole }) => {
+    mutationFn: async ({ userId, role }: { userId: string, role: UserRole }) => {
       const res = await apiRequest("PUT", `/api/users/${userId}`, { role });
       return await res.json();
     },
@@ -176,7 +176,7 @@ export default function UsersRolesPage() {
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
+    mutationFn: async (userId: string) => {
       await apiRequest("DELETE", `/api/users/${userId}`);
     },
     onSuccess: () => {

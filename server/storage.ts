@@ -364,10 +364,10 @@ export class MemStorage implements IStorage {
   }
   
   async createApiToken(token: InsertApiToken): Promise<ApiToken> {
-    const id = this.apiTokenIdCounter++;
+    const numId = this.apiTokenIdCounter++;
     const createdAt = new Date();
     const newToken: ApiToken = { 
-      id: id.toString(),
+      id: numId.toString(),
       name: token.name,
       token: token.token,
       organizationId: token.organizationId,
@@ -377,7 +377,7 @@ export class MemStorage implements IStorage {
       expiresAt: token.expiresAt ?? null,
       createdAt
     };
-    this.apiTokensMap.set(id, newToken);
+    this.apiTokensMap.set(numId, newToken);
     return newToken;
   }
   
@@ -403,11 +403,11 @@ export class MemStorage implements IStorage {
     newValue?: string, 
     userId?: string
   ): Promise<DnsHistory> {
-    const id = this.historyIdCounter++;
+    const numId = this.historyIdCounter++;
     const timestamp = new Date();
     
     const historyEntry: DnsHistory = {
-      id: id.toString(),
+      id: numId.toString(),
       recordId,
       action,
       previousValue: previousValue ?? null,
@@ -416,7 +416,7 @@ export class MemStorage implements IStorage {
       timestamp
     };
     
-    this.historyMap.set(id, historyEntry);
+    this.historyMap.set(numId, historyEntry);
     return historyEntry;
   }
   
