@@ -889,10 +889,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/webhooks", requireRole(["admin", "manager"]), async (req, res) => {
     try {
-      const validatedData = insertWebhookSchema.parse(req.body);
+      // Merge request body with user ID before validation
+      const requestData = {
+        ...req.body,
+        createdBy: req.user?.id // Add the user who created it
+      };
       
-      // Add the user who created it
-      validatedData.createdBy = req.user!.id;
+      // Then validate the complete data
+      const validatedData = insertWebhookSchema.parse(requestData);
       
       // Check authorization for non-admin users
       if (req.user?.role !== "admin" && validatedData.organizationId !== req.user?.organizationId) {
@@ -903,6 +907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(webhook);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
         console.error("Error creating webhook:", error);
