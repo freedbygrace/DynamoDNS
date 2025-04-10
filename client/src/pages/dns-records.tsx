@@ -168,7 +168,7 @@ export default function DnsRecordsPage() {
       if (!domainId) throw new Error("Domain ID is required");
       
       // Convert empty providerId to null
-      const providerId = data.providerId === "" ? null : data.providerId;
+      const providerId = data.providerId === "" || data.providerId === "none" ? null : data.providerId;
       
       const recordData: InsertDnsRecord = {
         ...data,
@@ -204,7 +204,7 @@ export default function DnsRecordsPage() {
   const updateRecordMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: z.infer<typeof dnsRecordSchema> }) => {
       // Convert empty providerId to null
-      const providerId = data.providerId === "" ? null : data.providerId;
+      const providerId = data.providerId === "" || data.providerId === "none" ? null : data.providerId;
       
       const updatedData = {
         ...data,
@@ -518,7 +518,7 @@ export default function DnsRecordsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {providers.map((provider) => (
                           <SelectItem 
                             key={provider.id} 
@@ -758,7 +758,7 @@ export default function DnsRecordsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {providers.map((provider) => (
                           <SelectItem 
                             key={provider.id} 
