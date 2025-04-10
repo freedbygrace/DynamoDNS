@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/context/organization-context";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -11,8 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useTheme } from "@/hooks/use-theme";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -27,13 +31,47 @@ const registerSchema = z.object({
   organizationId: z.string().optional(),
 });
 
+// Define LDAP login schema
+const ldapSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+// Type for Auth config from API
+interface AuthConfig {
+  localAuthEnabled: boolean;
+  registrationEnabled: boolean;
+  ldapEnabled: boolean;
+  oidcEnabled: boolean;
+  oidcButtonText: string;
+}
+
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const { theme } = useTheme();
   const { organizations, isLoading: orgsLoading } = useOrganization();
+  const [location, setLocation] = useLocation();
+  
+  // Fetch authentication configuration
+  const { data: authConfig, isLoading: configLoading } = useQuery<AuthConfig>({
+    queryKey: ['/api/auth/config'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // State for managing LDAP login
+  const [ldapLoginPending, setLdapLoginPending] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  const ldapForm = useForm<z.infer<typeof ldapSchema>>({
+    resolver: zodResolver(ldapSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -52,11 +90,53 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate(values);
+    setAuthError(null);
+    loginMutation.mutate(values, {
+      onError: (error: any) => {
+        setAuthError(error.message || "Login failed. Please check your credentials.");
+      }
+    });
+  };
+
+  const onLdapSubmit = async (values: z.infer<typeof ldapSchema>) => {
+    try {
+      setLdapLoginPending(true);
+      setAuthError(null);
+      
+      const response = await fetch('/api/auth/ldap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'LDAP authentication failed');
+      }
+      
+      // Force refresh user data
+      window.location.href = '/';
+    } catch (error: any) {
+      setAuthError(error.message || "LDAP login failed. Please check your credentials.");
+    } finally {
+      setLdapLoginPending(false);
+    }
   };
 
   const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    registerMutation.mutate(values);
+    setAuthError(null);
+    registerMutation.mutate(values, {
+      onError: (error: any) => {
+        setAuthError(error.message || "Registration failed. Please try again.");
+      }
+    });
+  };
+  
+  // Function to handle OIDC login
+  const handleOidcLogin = () => {
+    window.location.href = '/api/auth/oidc';
   };
 
   // Redirect if already logged in
@@ -91,61 +171,173 @@ export default function AuthPage() {
             </div>
             <CardTitle className="text-2xl">Welcome</CardTitle>
             <CardDescription>
-              Sign in to your account or create a new one
+              {configLoading 
+                ? "Loading..." 
+                : authConfig?.registrationEnabled 
+                  ? "Sign in to your account or create a new one" 
+                  : "Sign in to your account"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsList className={`grid w-full ${(!configLoading && authConfig?.registrationEnabled) ? 'grid-cols-2' : 'grid-cols-1'} mb-4`}>
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+                {(!configLoading && authConfig?.registrationEnabled) && (
+                  <TabsTrigger value="register">Register</TabsTrigger>
+                )}
               </TabsList>
               
               <TabsContent value="login">
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username or Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your username or email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={loginMutation.isPending}
-                    >
-                      {loginMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Logging in...
-                        </>
-                      ) : (
-                        "Login"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+                {authError && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertTitle>Authentication Error</AlertTitle>
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {configLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Local Authentication */}
+                    {authConfig?.localAuthEnabled && (
+                      <Form {...loginForm}>
+                        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                          <FormField
+                            control={loginForm.control}
+                            name="username"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Username or Email</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter your username or email" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={loginForm.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                  <Input type="password" placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button 
+                            type="submit" 
+                            className="w-full" 
+                            disabled={loginMutation.isPending}
+                          >
+                            {loginMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Logging in...
+                              </>
+                            ) : (
+                              "Login"
+                            )}
+                          </Button>
+                        </form>
+                      </Form>
+                    )}
+
+                    {/* LDAP Authentication */}
+                    {authConfig?.ldapEnabled && (
+                      <>
+                        {authConfig?.localAuthEnabled && (
+                          <div className="my-6 flex items-center">
+                            <div className="flex-1 h-px bg-border"></div>
+                            <p className="mx-4 text-sm text-muted-foreground">Or login with LDAP</p>
+                            <div className="flex-1 h-px bg-border"></div>
+                          </div>
+                        )}
+                        
+                        <Form {...ldapForm}>
+                          <form onSubmit={ldapForm.handleSubmit(onLdapSubmit)} className="space-y-4">
+                            <FormField
+                              control={ldapForm.control}
+                              name="username"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>LDAP Username</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Enter your LDAP username" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={ldapForm.control}
+                              name="password"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>LDAP Password</FormLabel>
+                                  <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <Button 
+                              type="submit" 
+                              className="w-full" 
+                              disabled={ldapLoginPending}
+                              variant="outline"
+                            >
+                              {ldapLoginPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  LDAP Authentication...
+                                </>
+                              ) : (
+                                "Login with LDAP"
+                              )}
+                            </Button>
+                          </form>
+                        </Form>
+                      </>
+                    )}
+
+                    {/* OIDC Authentication */}
+                    {authConfig?.oidcEnabled && (
+                      <>
+                        {(authConfig?.localAuthEnabled || authConfig?.ldapEnabled) && (
+                          <div className="my-6 flex items-center">
+                            <div className="flex-1 h-px bg-border"></div>
+                            <p className="mx-4 text-sm text-muted-foreground">Or</p>
+                            <div className="flex-1 h-px bg-border"></div>
+                          </div>
+                        )}
+                        
+                        <Button 
+                          onClick={handleOidcLogin}
+                          className="w-full"
+                          variant="secondary"
+                        >
+                          {authConfig?.oidcButtonText || "Sign in with OpenID Connect"}
+                        </Button>
+                      </>
+                    )}
+
+                    {!authConfig?.localAuthEnabled && !authConfig?.ldapEnabled && !authConfig?.oidcEnabled && (
+                      <Alert className="mb-4">
+                        <AlertTitle>Authentication Error</AlertTitle>
+                        <AlertDescription>No authentication methods are enabled. Please contact your administrator.</AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                )}
               </TabsContent>
               
               <TabsContent value="register">
