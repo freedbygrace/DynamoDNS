@@ -7,7 +7,8 @@ import {
   type ApiToken, type InsertApiToken,
   type DnsHistory,
   type Webhook, type InsertWebhook,
-  type WebhookDeliveryLog, type InsertWebhookDeliveryLog
+  type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
+  type DnsMetric, type InsertDnsMetric
 } from "@shared/schema";
 import session from "express-session";
 import { DatabaseStorage } from "./database-storage";
@@ -76,6 +77,13 @@ export interface IStorage {
   getWebhookDeliveryLog(id: string): Promise<WebhookDeliveryLog | undefined>;
   getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]>;
   
+  // DNS Metrics
+  addDnsMetric(metric: InsertDnsMetric): Promise<DnsMetric>;
+  getDnsMetric(id: string): Promise<DnsMetric | undefined>;
+  getDnsMetricsByDomain(domainId: string, metricType?: string, startDate?: Date, endDate?: Date): Promise<DnsMetric[]>;
+  getDnsMetricsByRecord(recordId: string, metricType?: string, startDate?: Date, endDate?: Date): Promise<DnsMetric[]>;
+  getDnsMetricsByType(metricType: string, startDate?: Date, endDate?: Date): Promise<DnsMetric[]>;
+  
   // Session store
   sessionStore: any;
 }
@@ -90,6 +98,7 @@ export class MemStorage implements IStorage {
   private historyMap: Map<number, DnsHistory>;
   private webhooksMap: Map<number, Webhook>;
   private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
+  private metricsMap: Map<number, DnsMetric>;
   
   // Counters for IDs
   private userIdCounter: number;
@@ -101,6 +110,7 @@ export class MemStorage implements IStorage {
   private historyIdCounter: number;
   private webhookIdCounter: number;
   private webhookDeliveryLogIdCounter: number;
+  private metricIdCounter: number;
   
   public sessionStore: any;
 
@@ -114,6 +124,7 @@ export class MemStorage implements IStorage {
     this.historyMap = new Map();
     this.webhooksMap = new Map();
     this.webhookDeliveryLogsMap = new Map();
+    this.metricsMap = new Map();
     
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
@@ -124,6 +135,7 @@ export class MemStorage implements IStorage {
     this.historyIdCounter = 1;
     this.webhookIdCounter = 1;
     this.webhookDeliveryLogIdCounter = 1;
+    this.metricIdCounter = 1;
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -612,6 +624,97 @@ export class MemStorage implements IStorage {
     return Array.from(this.webhookDeliveryLogsMap.values())
       .filter(log => log.webhookId === webhookId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  // DNS Metrics
+  async addDnsMetric(metric: InsertDnsMetric): Promise<DnsMetric> {
+    const numId = this.metricIdCounter++;
+    const timestamp = new Date();
+    
+    const newMetric: DnsMetric = {
+      id: numId.toString(),
+      domainId: metric.domainId || null,
+      recordId: metric.recordId || null,
+      metricType: metric.metricType,
+      value: metric.value,
+      source: metric.source || null,
+      tags: metric.tags || null,
+      timestamp
+    };
+    
+    this.metricsMap.set(numId, newMetric);
+    return newMetric;
+  }
+  
+  async getDnsMetric(id: string): Promise<DnsMetric | undefined> {
+    return this.metricsMap.get(parseInt(id));
+  }
+  
+  async getDnsMetricsByDomain(
+    domainId: string, 
+    metricType?: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let metrics = Array.from(this.metricsMap.values())
+      .filter(metric => metric.domainId === domainId);
+    
+    if (metricType) {
+      metrics = metrics.filter(metric => metric.metricType === metricType);
+    }
+    
+    if (startDate) {
+      metrics = metrics.filter(metric => metric.timestamp >= startDate);
+    }
+    
+    if (endDate) {
+      metrics = metrics.filter(metric => metric.timestamp <= endDate);
+    }
+    
+    return metrics.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+  
+  async getDnsMetricsByRecord(
+    recordId: string, 
+    metricType?: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let metrics = Array.from(this.metricsMap.values())
+      .filter(metric => metric.recordId === recordId);
+    
+    if (metricType) {
+      metrics = metrics.filter(metric => metric.metricType === metricType);
+    }
+    
+    if (startDate) {
+      metrics = metrics.filter(metric => metric.timestamp >= startDate);
+    }
+    
+    if (endDate) {
+      metrics = metrics.filter(metric => metric.timestamp <= endDate);
+    }
+    
+    return metrics.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+  
+  async getDnsMetricsByType(
+    metricType: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let metrics = Array.from(this.metricsMap.values())
+      .filter(metric => metric.metricType === metricType);
+    
+    if (startDate) {
+      metrics = metrics.filter(metric => metric.timestamp >= startDate);
+    }
+    
+    if (endDate) {
+      metrics = metrics.filter(metric => metric.timestamp <= endDate);
+    }
+    
+    return metrics.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 }
 
