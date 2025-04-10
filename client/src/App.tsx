@@ -6,7 +6,6 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard";
 import DomainsPage from "@/pages/domains";
-import DnsRecordsPage from "@/pages/dns-records";
 import MetricsPage from "@/pages/metrics";
 import HistoryPage from "@/pages/history";
 import ApiTokensPage from "@/pages/api-tokens";
@@ -30,7 +29,6 @@ function Router() {
       <ProtectedRoute path="/" component={DashboardPage} />
       <ProtectedRoute path="/organizations" component={OrganizationsPage} />
       <ProtectedRoute path="/domains" component={DomainsPage} />
-      <ProtectedRoute path="/dns-records" component={DnsRecordsPage} />
       <ProtectedRoute path="/metrics" component={MetricsPage} />
       <ProtectedRoute path="/history" component={HistoryPage} />
       <ProtectedRoute path="/api-tokens" component={ApiTokensPage} />
