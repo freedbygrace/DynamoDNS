@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/context/organization-context";
-import { Webhook } from "@shared/schema";
+import { Webhook, WebhookDeliveryLog } from "@shared/schema";
 
 import {
   Card,

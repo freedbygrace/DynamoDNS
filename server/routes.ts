@@ -911,5 +911,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Webhook Delivery Log endpoints
+  
+  // Get all delivery logs for a webhook
+  app.get("/api/webhooks/:id/logs", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const webhook = await storage.getWebhook(req.params.id);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      // Permission check: admin can view all logs, others only for their organization's webhooks
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to access logs for this webhook" });
+      }
+      
+      const logs = await storage.getWebhookDeliveryLogsByWebhook(req.params.id);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching webhook delivery logs:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get a specific delivery log by ID
+  app.get("/api/webhook-logs/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const log = await storage.getWebhookDeliveryLog(req.params.id);
+      
+      if (!log) {
+        return res.status(404).json({ message: "Webhook delivery log not found" });
+      }
+      
+      // Need to get the webhook to check permissions
+      const webhook = await storage.getWebhook(log.webhookId);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Associated webhook not found" });
+      }
+      
+      // Permission check
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to access this log" });
+      }
+      
+      res.json(log);
+    } catch (error) {
+      console.error("Error fetching webhook delivery log:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
