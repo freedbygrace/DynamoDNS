@@ -1,8 +1,10 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { setupAuth, requireRole } from "./auth";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import {
   insertDomainSchema,
   insertDnsRecordSchema,
@@ -11,8 +13,10 @@ import {
   insertOrganizationSchema,
   insertWebhookSchema,
   insertDnsMetricSchema,
+  insertCustomRoleSchema,
   recordTypes,
-  providerTypes
+  providerTypes,
+  customRoles
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 
@@ -1096,6 +1100,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error retrying webhook delivery:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Custom Roles endpoints
+  
+  // Get all custom roles
+  app.get("/api/roles/custom", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Only admins can view custom roles
+      const customRoles = await db.query.customRoles.findMany({
+        orderBy: (roles, { desc }) => [desc(roles.createdAt)],
+      });
+      
+      res.json(customRoles);
+    } catch (error) {
+      console.error("Error fetching custom roles:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get a single custom role by ID
+  app.get("/api/roles/custom/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const role = await db.query.customRoles.findFirst({
+        where: eq(customRoles.id, req.params.id),
+      });
+      
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      res.json(role);
+    } catch (error) {
+      console.error("Error fetching custom role:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Create a new custom role
+  app.post("/api/roles/custom", requireRole(["admin"]), async (req, res) => {
+    try {
+      const validatedData = insertCustomRoleSchema.parse(req.body);
+      
+      // Check if a role with this name already exists
+      const existingRole = await db.query.customRoles.findFirst({
+        where: eq(customRoles.name, validatedData.name),
+      });
+      
+      if (existingRole) {
+        return res.status(400).json({ message: "A role with this name already exists" });
+      }
+      
+      const [newRole] = await db.insert(customRoles).values(validatedData).returning();
+      
+      res.status(201).json(newRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error creating custom role:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+  
+  // Update a custom role
+  app.put("/api/roles/custom/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const roleId = req.params.id;
+      
+      // Check if the role exists
+      const existingRole = await db.query.customRoles.findFirst({
+        where: eq(customRoles.id, roleId),
+      });
+      
+      if (!existingRole) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Validate the request data
+      const validatedData = insertCustomRoleSchema.partial().parse(req.body);
+      
+      // If name is being updated, check for duplicates
+      if (validatedData.name && validatedData.name !== existingRole.name) {
+        const duplicateName = await db.query.customRoles.findFirst({
+          where: eq(customRoles.name, validatedData.name),
+        });
+        
+        if (duplicateName) {
+          return res.status(400).json({ message: "A role with this name already exists" });
+        }
+      }
+      
+      // Update the role
+      const [updatedRole] = await db
+        .update(customRoles)
+        .set(validatedData)
+        .where(eq(customRoles.id, roleId))
+        .returning();
+      
+      res.json(updatedRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error updating custom role:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+  
+  // Delete a custom role
+  app.delete("/api/roles/custom/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const roleId = req.params.id;
+      
+      // Check if the role exists
+      const existingRole = await db.query.customRoles.findFirst({
+        where: eq(customRoles.id, roleId),
+      });
+      
+      if (!existingRole) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Delete the role
+      await db.delete(customRoles).where(eq(customRoles.id, roleId));
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting custom role:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
