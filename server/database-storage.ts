@@ -450,15 +450,17 @@ export class DatabaseStorage implements IStorage {
         conditions.push(sql`${dnsMetrics.timestamp} <= ${endDate}`);
       }
       
-      // Use a single where with and() to combine all conditions
+      // Only select columns that we know exist to avoid DB schema issues
       const results = await db.select({
         id: dnsMetrics.id,
         domainId: dnsMetrics.domainId,
         recordId: dnsMetrics.recordId,
         metricType: dnsMetrics.metricType,
         value: dnsMetrics.value,
-        tags: dnsMetrics.tags,
-        timestamp: dnsMetrics.timestamp
+        timestamp: dnsMetrics.timestamp,
+        // Add empty/default values for columns that might be missing in the DB schema
+        source: sql`NULL::text`,
+        tags: sql`NULL::text[]`
       })
       .from(dnsMetrics)
       .where(and(...conditions))
