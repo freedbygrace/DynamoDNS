@@ -65,7 +65,21 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { Loader2, Plus, Trash, Edit, ExternalLink, RefreshCw, Clock, Check, X, Activity, Eye, Bell, BellRing } from "lucide-react";
+import { 
+  Loader2, 
+  Plus, 
+  Trash, 
+  Edit, 
+  ExternalLink, 
+  RefreshCw, 
+  Clock, 
+  Check, 
+  X, 
+  Activity, 
+  Eye, 
+  Bell, 
+  BellRing 
+} from "lucide-react";
 
 export default function WebhooksPage() {
   const { toast } = useToast();
