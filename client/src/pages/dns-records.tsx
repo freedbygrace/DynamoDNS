@@ -54,10 +54,16 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { RecentActivity } from "@/components/activity/recent-activity";
 import { Pagination } from "@/components/shared/pagination";
-import { Loader2, Home, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Loader2, Home, Plus, Pencil, Trash2, ArrowLeft, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
 
@@ -69,6 +75,8 @@ const dnsRecordSchema = z.object({
   ttl: z.number().int().min(1).default(3600),
   proxied: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  isAutoIP: z.boolean().default(false),
+  notes: z.string().optional(),
 });
 
 export default function DnsRecordsPage() {
@@ -113,6 +121,8 @@ export default function DnsRecordsPage() {
       ttl: 3600,
       proxied: false,
       isActive: true,
+      isAutoIP: false,
+      notes: "",
     },
   });
 
@@ -123,9 +133,11 @@ export default function DnsRecordsPage() {
         name: selectedRecord.name,
         type: selectedRecord.type as any,
         content: selectedRecord.content,
-        ttl: selectedRecord.ttl,
-        proxied: selectedRecord.proxied,
+        ttl: selectedRecord.ttl ?? 3600,
+        proxied: selectedRecord.proxied ?? false,
         isActive: selectedRecord.isActive,
+        isAutoIP: selectedRecord.isAutoIP ?? false,
+        notes: selectedRecord.notes ?? "",
       });
     } else {
       form.reset({
@@ -135,6 +147,8 @@ export default function DnsRecordsPage() {
         ttl: 3600,
         proxied: false,
         isActive: true,
+        isAutoIP: false,
+        notes: "",
       });
     }
   }, [selectedRecord, form]);
@@ -289,7 +303,7 @@ export default function DnsRecordsPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink>{domain?.name || 'Loading...'}</BreadcrumbLink>
+            <BreadcrumbLink href="#">{domain?.name || 'Loading...'}</BreadcrumbLink>
           </BreadcrumbItem>
         </Breadcrumb>
       </div>
@@ -345,6 +359,11 @@ export default function DnsRecordsPage() {
                             <TableCell className="font-medium">{record.name}</TableCell>
                             <TableCell>
                               <Badge variant="outline">{record.type}</Badge>
+                              {record.isAutoIP && (record.type === 'A' || record.type === 'AAAA') && (
+                                <Badge variant="outline" className="ml-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                  Auto IP
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {record.content.length > 30 
@@ -369,21 +388,37 @@ export default function DnsRecordsPage() {
                                 : "Never"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditRecord(record)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteRecord(record)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center justify-end">
+                                {record.notes && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <FileText className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        <p className="font-normal">{record.notes}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditRecord(record)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteRecord(record)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -559,6 +594,46 @@ export default function DnsRecordsPage() {
                 )}
               />
               
+              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
+                <FormField
+                  control={form.control}
+                  name="isAutoIP"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto IP Address</FormLabel>
+                        <FormDescription>
+                          Automatically determine IP address using STUN
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Optional notes about this record" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Add any additional information about this record
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <DialogFooter>
                 <Button 
                   type="submit" 
@@ -720,6 +795,46 @@ export default function DnsRecordsPage() {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
+                <FormField
+                  control={form.control}
+                  name="isAutoIP"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto IP Address</FormLabel>
+                        <FormDescription>
+                          Automatically determine IP address using STUN
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Optional notes about this record" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Add any additional information about this record
+                    </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
