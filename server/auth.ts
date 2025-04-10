@@ -12,7 +12,7 @@ import { z } from "zod";
 import 'dotenv/config';
 
 // Authentication configuration from environment variables
-const CONFIG = {
+export const CONFIG = {
   // Local auth configuration
   LOCAL_AUTH_ENABLED: process.env.LOCAL_AUTH_ENABLED !== 'false', // Enabled by default
   DISABLE_REGISTRATION: process.env.DISABLE_REGISTRATION === 'true', // Disabled by default
@@ -36,7 +36,8 @@ const CONFIG = {
   OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET || '',
   OIDC_CALLBACK_URL: process.env.OIDC_CALLBACK_URL || 'http://localhost:5000/api/auth/oidc/callback',
   OIDC_SCOPE: process.env.OIDC_SCOPE || 'openid profile email',
-  OIDC_AUTO_REGISTER: process.env.OIDC_AUTO_REGISTER === 'true'
+  OIDC_AUTO_REGISTER: process.env.OIDC_AUTO_REGISTER === 'true',
+  OIDC_BUTTON_TEXT: process.env.OIDC_BUTTON_TEXT || 'Sign in with OpenID Connect'
 };
 
 declare global {
@@ -408,7 +409,7 @@ export function setupAuth(app: Express) {
       registrationEnabled: !CONFIG.DISABLE_REGISTRATION,
       ldapEnabled: CONFIG.LDAP_ENABLED,
       oidcEnabled: CONFIG.OIDC_ENABLED,
-      oidcButtonText: process.env.OIDC_BUTTON_TEXT || "Sign in with OpenID Connect"
+      oidcButtonText: CONFIG.OIDC_BUTTON_TEXT
     });
   });
   
