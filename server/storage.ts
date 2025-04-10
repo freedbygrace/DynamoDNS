@@ -313,13 +313,14 @@ export class MemStorage implements IStorage {
   
   async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
     const numId = this.groupMemberIdCounter++;
-    const createdAt = new Date();
+    const addedAt = new Date();
     const newMember: GroupMember = {
       id: numId.toString(),
       groupId: member.groupId,
       memberId: member.memberId,
       memberType: member.memberType,
-      createdAt
+      addedBy: member.addedBy,
+      addedAt
     };
     this.groupMembersMap.set(numId, newMember);
     return newMember;
