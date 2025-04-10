@@ -821,14 +821,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Webhooks
-  app.get("/api/webhooks", requireRole(["admin", "manager"]), async (req, res) => {
+  app.get("/api/webhooks", async (req, res) => {
     try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Check if user has appropriate role (admin or manager)
+      const userRole = req.user?.role;
+      if (userRole !== 'admin' && userRole !== 'manager') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+      
       let webhooks;
       const orgId = req.query.organizationId as string;
       
       if (orgId) {
+        // For specific organization, check if user belongs to that org
+        if (userRole !== "admin" && req.user?.organizationId !== orgId) {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
         webhooks = await storage.getWebhooksByOrganization(orgId);
-      } else if (req.user?.role === "admin") {
+      } else if (userRole === "admin") {
         // Admins can see all webhooks
         const allOrgs = await storage.getOrganizations();
         webhooks = await Promise.all(
