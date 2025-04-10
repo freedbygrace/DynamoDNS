@@ -16,6 +16,7 @@ import {
   LogOut,
   Webhook,
   ClipboardList,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -68,6 +69,12 @@ export function Sidebar() {
       title: "Users & Roles",
       href: "/users-roles",
       icon: <Users className="w-5 h-5 mr-3" />,
+      roles: ["admin"],
+    },
+    {
+      title: "Roles",
+      href: "/roles",
+      icon: <ShieldAlert className="w-5 h-5 mr-3" />,
       roles: ["admin"],
     },
     {
