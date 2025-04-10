@@ -105,7 +105,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllDomains(): Promise<Domain[]> {
-    return await db.select().from(domains);
+    try {
+      return await db.select().from(domains);
+    } catch (error) {
+      console.error("Error fetching domains:", error);
+      // If there's an error with the database query,
+      // return an empty array rather than throwing an exception
+      return [];
+    }
   }
 
   async createDomain(domain: InsertDomain): Promise<Domain> {
