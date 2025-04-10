@@ -205,7 +205,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/domains/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      // Use id as string without parsing to int
+      const id = req.params.id;
       const validatedData = insertDomainSchema.partial().parse(req.body);
       
       const updatedDomain = await storage.updateDomain(id, validatedData);
@@ -227,7 +228,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/domains/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      // Use id as string without parsing
+      const id = req.params.id;
       const deleted = await storage.deleteDomain(id);
       
       if (!deleted) {

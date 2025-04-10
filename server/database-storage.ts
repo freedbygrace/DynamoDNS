@@ -200,21 +200,134 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDomain(domain: InsertDomain): Promise<Domain> {
-    const [newDomain] = await db.insert(domains).values(domain).returning();
-    return newDomain;
+    try {
+      // Use raw SQL to avoid schema issues
+      const now = new Date().toISOString();
+      const query = sql`
+        INSERT INTO domains (
+          id, 
+          name, 
+          organization_id, 
+          is_active, 
+          provider_id, 
+          created_at
+        ) VALUES (
+          gen_random_uuid(), 
+          ${domain.name}, 
+          ${domain.organizationId}, 
+          ${domain.isActive}, 
+          ${domain.providerId || null},
+          ${now}
+        )
+        RETURNING 
+          id, 
+          name, 
+          organization_id as "organizationId", 
+          is_active as "isActive", 
+          provider_id as "providerId",
+          created_at as "createdAt"
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error("Failed to create domain");
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to Domain type
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        organizationId: row.organizationId as string,
+        isActive: Boolean(row.isActive),
+        providerId: row.providerId as string,
+        createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
+        lastUpdated: new Date() // Use creation date as the last updated date
+      };
+    } catch (error) {
+      console.error("Error creating domain:", error);
+      throw error;
+    }
   }
 
   async updateDomain(id: string, domainData: Partial<InsertDomain>): Promise<Domain | undefined> {
-    const [updatedDomain] = await db.update(domains)
-      .set({ ...domainData, lastUpdated: new Date() })
-      .where(eq(domains.id, id))
-      .returning();
-    return updatedDomain;
+    try {
+      // Check if the domain exists first
+      const existingDomain = await this.getDomain(id);
+      if (!existingDomain) {
+        return undefined;
+      }
+      
+      // Use raw SQL to avoid schema issues
+      const updateFields = Object.entries(domainData)
+        .map(([key, value]) => `${key === 'organizationId' ? 'organization_id' : 
+                               key === 'isActive' ? 'is_active' : key} = ${
+          typeof value === 'string' ? `'${value}'` : 
+          typeof value === 'boolean' ? value : 
+          value === null ? 'NULL' : `'${value}'`
+        }`)
+        .join(', ');
+        
+      // Add lastUpdated field (using database naming convention)
+      const now = new Date().toISOString();
+      const query = sql`
+        UPDATE domains 
+        SET ${sql.raw(updateFields)}, last_updated = ${now}
+        WHERE id = ${id}
+        RETURNING 
+          id, 
+          name, 
+          organization_id as "organizationId", 
+          is_active as "isActive", 
+          created_at as "createdAt"
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to Domain type with expected fields
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        organizationId: row.organizationId as string,
+        isActive: Boolean(row.isActive),
+        createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
+        providerId: existingDomain.providerId || '', // Keep existing value
+        lastUpdated: new Date() // Use current date for lastUpdated
+      };
+    } catch (error) {
+      console.error("Error updating domain:", error);
+      return undefined;
+    }
   }
 
   async deleteDomain(id: string): Promise<boolean> {
-    const result = await db.delete(domains).where(eq(domains.id, id)).returning();
-    return result.length > 0;
+    try {
+      // Check first if the domain exists
+      const domain = await this.getDomain(id);
+      if (!domain) {
+        return false;
+      }
+      
+      // Use raw SQL to avoid schema issues
+      const result = await db.execute(sql`
+        DELETE FROM domains 
+        WHERE id = ${id}
+        RETURNING id
+      `);
+      
+      return result.rows?.length > 0;
+    } catch (error) {
+      console.error("Error deleting domain:", error);
+      return false;
+    }
   }
 
   // DNS Record management
