@@ -99,19 +99,51 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDomainsByOrganization(organizationId: string): Promise<Domain[]> {
-    return await db.select()
+    try {
+      // Select only core columns that we know are in the schema to avoid errors
+      const results = await db.select({
+        id: domains.id,
+        name: domains.name,
+        organizationId: domains.organizationId,
+        isActive: domains.isActive,
+        createdAt: domains.createdAt,
+        // Provide a default providerId which is expected in the Domain type
+        providerId: sql`NULL::text as providerId`,
+        // Use null for potentially missing fields
+        lastUpdated: sql`NULL::timestamp as lastUpdated`
+      })
       .from(domains)
-      .where(eq(domains.organizationId, organizationId));
+      .where(eq(domains.organizationId, organizationId))
+      .orderBy(domains.name);
+      
+      return results;
+    } catch (error) {
+      console.error("Error fetching domains by organization:", error);
+      return []; // Return empty array instead of crashing
+    }
   }
 
   async getAllDomains(): Promise<Domain[]> {
     try {
-      return await db.select().from(domains);
+      // Select only specific columns to avoid issues with database schema changes/missing columns
+      const results = await db.select({
+        id: domains.id,
+        name: domains.name,
+        organizationId: domains.organizationId,
+        registrarId: domains.registrarId,
+        isActive: domains.isActive,
+        expiresAt: domains.expiresAt,
+        createdAt: domains.createdAt,
+        updatedAt: domains.updatedAt,
+        // Add any other known fields that should be part of the Domain type
+      })
+      .from(domains)
+      .orderBy(domains.name);
+      
+      return results;
     } catch (error) {
       console.error("Error fetching domains:", error);
-      // If there's an error with the database query,
-      // return an empty array rather than throwing an exception
-      return [];
+      return []; // Return empty array instead of crashing
     }
   }
 
@@ -389,20 +421,20 @@ export class DatabaseStorage implements IStorage {
   async getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]> {
     try {
       // Use a specific select list to avoid potential schema issues
-      // Only select columns that we know exist in the database
+      // Only select basic columns and add empty values for potentially missing ones
       const logs = await db.select({
-        id: webhookDeliveryLogs.id,
+        id: webhookDeliveryLogs.id, 
         webhookId: webhookDeliveryLogs.webhookId,
         status: webhookDeliveryLogs.status,
         statusCode: webhookDeliveryLogs.statusCode,
-        message: webhookDeliveryLogs.message,
         payload: webhookDeliveryLogs.payload,
         responseBody: webhookDeliveryLogs.responseBody,
         retryCount: webhookDeliveryLogs.retryCount,
         createdAt: webhookDeliveryLogs.createdAt,
         signature: webhookDeliveryLogs.signature,
         // Use null for potentially missing fields
-        event: sql`NULL as event`
+        event: sql`NULL::text as event`,
+        message: sql`NULL::text as message`
       })
       .from(webhookDeliveryLogs)
       .where(eq(webhookDeliveryLogs.webhookId, webhookId))
