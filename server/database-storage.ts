@@ -1,13 +1,13 @@
 import { 
   users, organizations, domains, dnsRecords, 
-  providers, dnsHistory, apiTokens, 
+  providers, dnsHistory, apiTokens, webhooks,
   type User, type InsertUser, 
   type Organization, type InsertOrganization,
   type Domain, type InsertDomain,
   type DnsRecord, type InsertDnsRecord,
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
-  type DnsHistory
+  type DnsHistory, type Webhook, type InsertWebhook
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
@@ -259,5 +259,56 @@ export class DatabaseStorage implements IStorage {
         sql`${dnsHistory.recordId} IN (${sql.join(recordIds, sql`, `)})`
       )
       .orderBy(desc(dnsHistory.timestamp));
+  }
+
+  // Webhook management
+  async getWebhook(id: string): Promise<Webhook | undefined> {
+    const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
+    return webhook;
+  }
+
+  async getWebhooksByOrganization(organizationId: string): Promise<Webhook[]> {
+    return await db.select()
+      .from(webhooks)
+      .where(eq(webhooks.organizationId, organizationId));
+  }
+
+  async createWebhook(webhook: InsertWebhook): Promise<Webhook> {
+    const [newWebhook] = await db.insert(webhooks).values(webhook).returning();
+    return newWebhook;
+  }
+
+  async updateWebhook(id: string, webhookData: Partial<InsertWebhook>): Promise<Webhook | undefined> {
+    const [updatedWebhook] = await db.update(webhooks)
+      .set(webhookData)
+      .where(eq(webhooks.id, id))
+      .returning();
+    return updatedWebhook;
+  }
+
+  async deleteWebhook(id: string): Promise<boolean> {
+    const result = await db.delete(webhooks).where(eq(webhooks.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async triggerWebhook(webhookId: string, payload: any): Promise<boolean> {
+    try {
+      // Get the webhook
+      const webhook = await this.getWebhook(webhookId);
+      if (!webhook || !webhook.isActive) return false;
+
+      // In a real implementation, this would make an HTTP request to the webhook URL
+      console.log(`Triggering webhook ${webhook.name} (${webhook.id}) with payload:`, payload);
+      
+      // Update the lastTriggered timestamp
+      await db.update(webhooks)
+        .set({ lastTriggered: new Date() })
+        .where(eq(webhooks.id, webhookId));
+      
+      return true;
+    } catch (error) {
+      console.error(`Error triggering webhook ${webhookId}:`, error);
+      return false;
+    }
   }
 }
