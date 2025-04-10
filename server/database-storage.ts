@@ -1,6 +1,6 @@
 import { 
   users, organizations, domains, dnsRecords, 
-  providers, dnsHistory, apiTokens, webhooks, webhookDeliveryLogs,
+  providers, dnsHistory, apiTokens, webhooks, webhookDeliveryLogs, dnsMetrics,
   type User, type InsertUser, 
   type Organization, type InsertOrganization,
   type Domain, type InsertDomain,
@@ -8,7 +8,8 @@ import {
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
   type DnsHistory, type Webhook, type InsertWebhook,
-  type WebhookDeliveryLog, type InsertWebhookDeliveryLog
+  type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
+  type DnsMetric, type InsertDnsMetric
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
@@ -373,5 +374,80 @@ export class DatabaseStorage implements IStorage {
       .from(webhookDeliveryLogs)
       .where(eq(webhookDeliveryLogs.webhookId, webhookId))
       .orderBy(desc(webhookDeliveryLogs.createdAt));
+  }
+
+  // DNS Metrics
+  async addDnsMetric(metric: InsertDnsMetric): Promise<DnsMetric> {
+    const [newMetric] = await db.insert(dnsMetrics).values(metric).returning();
+    return newMetric;
+  }
+  
+  async getDnsMetric(id: string): Promise<DnsMetric | undefined> {
+    const [metric] = await db.select().from(dnsMetrics).where(eq(dnsMetrics.id, id));
+    return metric;
+  }
+  
+  async getDnsMetricsByDomain(
+    domainId: string, 
+    metricType?: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let query = db.select().from(dnsMetrics).where(eq(dnsMetrics.domainId, domainId));
+    
+    if (metricType) {
+      query = query.where(eq(dnsMetrics.metricType, metricType));
+    }
+    
+    if (startDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} >= ${startDate}`);
+    }
+    
+    if (endDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} <= ${endDate}`);
+    }
+    
+    return await query.orderBy(desc(dnsMetrics.timestamp));
+  }
+  
+  async getDnsMetricsByRecord(
+    recordId: string, 
+    metricType?: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let query = db.select().from(dnsMetrics).where(eq(dnsMetrics.recordId, recordId));
+    
+    if (metricType) {
+      query = query.where(eq(dnsMetrics.metricType, metricType));
+    }
+    
+    if (startDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} >= ${startDate}`);
+    }
+    
+    if (endDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} <= ${endDate}`);
+    }
+    
+    return await query.orderBy(desc(dnsMetrics.timestamp));
+  }
+  
+  async getDnsMetricsByType(
+    metricType: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<DnsMetric[]> {
+    let query = db.select().from(dnsMetrics).where(eq(dnsMetrics.metricType, metricType));
+    
+    if (startDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} >= ${startDate}`);
+    }
+    
+    if (endDate) {
+      query = query.where(sql`${dnsMetrics.timestamp} <= ${endDate}`);
+    }
+    
+    return await query.orderBy(desc(dnsMetrics.timestamp));
   }
 }
