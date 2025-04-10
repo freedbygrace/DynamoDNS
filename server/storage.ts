@@ -12,54 +12,54 @@ import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
   // User management
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
   // Organization management
-  getOrganization(id: number): Promise<Organization | undefined>;
+  getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizations(): Promise<Organization[]>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
-  updateOrganization(id: number, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
-  deleteOrganization(id: number): Promise<boolean>;
+  updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
+  deleteOrganization(id: string): Promise<boolean>;
   
   // Domain management
-  getDomain(id: number): Promise<Domain | undefined>;
-  getDomainsByOrganization(organizationId: number): Promise<Domain[]>;
+  getDomain(id: string): Promise<Domain | undefined>;
+  getDomainsByOrganization(organizationId: string): Promise<Domain[]>;
   getAllDomains(): Promise<Domain[]>;
   createDomain(domain: InsertDomain): Promise<Domain>;
-  updateDomain(id: number, domain: Partial<InsertDomain>): Promise<Domain | undefined>;
-  deleteDomain(id: number): Promise<boolean>;
+  updateDomain(id: string, domain: Partial<InsertDomain>): Promise<Domain | undefined>;
+  deleteDomain(id: string): Promise<boolean>;
   
   // DNS Record management
-  getDnsRecord(id: number): Promise<DnsRecord | undefined>;
-  getDnsRecordsByDomain(domainId: number): Promise<DnsRecord[]>;
+  getDnsRecord(id: string): Promise<DnsRecord | undefined>;
+  getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]>;
   createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord>;
-  updateDnsRecord(id: number, record: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined>;
-  deleteDnsRecord(id: number): Promise<boolean>;
+  updateDnsRecord(id: string, record: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined>;
+  deleteDnsRecord(id: string): Promise<boolean>;
   
   // Provider management
-  getProvider(id: number): Promise<Provider | undefined>;
+  getProvider(id: string): Promise<Provider | undefined>;
   getProviders(): Promise<Provider[]>;
   createProvider(provider: InsertProvider): Promise<Provider>;
-  updateProvider(id: number, provider: Partial<InsertProvider>): Promise<Provider | undefined>;
-  deleteProvider(id: number): Promise<boolean>;
+  updateProvider(id: string, provider: Partial<InsertProvider>): Promise<Provider | undefined>;
+  deleteProvider(id: string): Promise<boolean>;
   
   // API Token management
-  getApiToken(id: number): Promise<ApiToken | undefined>;
+  getApiToken(id: string): Promise<ApiToken | undefined>;
   getApiTokenByToken(token: string): Promise<ApiToken | undefined>;
-  getApiTokensByOrganization(organizationId: number): Promise<ApiToken[]>;
+  getApiTokensByOrganization(organizationId: string): Promise<ApiToken[]>;
   createApiToken(token: InsertApiToken): Promise<ApiToken>;
-  updateApiToken(id: number, token: Partial<InsertApiToken>): Promise<ApiToken | undefined>;
-  deleteApiToken(id: number): Promise<boolean>;
+  updateApiToken(id: string, token: Partial<InsertApiToken>): Promise<ApiToken | undefined>;
+  deleteApiToken(id: string): Promise<boolean>;
   
   // DNS History
-  addDnsHistory(recordId: number, action: string, previousValue?: string, newValue?: string, userId?: number): Promise<DnsHistory>;
-  getDnsHistoryByRecord(recordId: number): Promise<DnsHistory[]>;
-  getDnsHistoryByDomain(domainId: number): Promise<DnsHistory[]>;
+  addDnsHistory(recordId: string, action: string, previousValue?: string, newValue?: string, userId?: string): Promise<DnsHistory>;
+  getDnsHistoryByRecord(recordId: string): Promise<DnsHistory[]>;
+  getDnsHistoryByDomain(domainId: string): Promise<DnsHistory[]>;
   
   // Session store
   sessionStore: any;

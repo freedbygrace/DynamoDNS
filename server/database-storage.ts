@@ -29,7 +29,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User management
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
@@ -49,7 +49,7 @@ export class DatabaseStorage implements IStorage {
     return newUser;
   }
 
-  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
     const [updatedUser] = await db.update(users)
       .set(userData)
       .where(eq(users.id, id))
@@ -57,13 +57,13 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  async deleteUser(id: number): Promise<boolean> {
+  async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id)).returning();
     return result.length > 0;
   }
 
   // Organization management
-  async getOrganization(id: number): Promise<Organization | undefined> {
+  async getOrganization(id: string): Promise<Organization | undefined> {
     const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
     return org;
   }
@@ -77,7 +77,7 @@ export class DatabaseStorage implements IStorage {
     return newOrg;
   }
 
-  async updateOrganization(id: number, orgData: Partial<InsertOrganization>): Promise<Organization | undefined> {
+  async updateOrganization(id: string, orgData: Partial<InsertOrganization>): Promise<Organization | undefined> {
     const [updatedOrg] = await db.update(organizations)
       .set(orgData)
       .where(eq(organizations.id, id))
@@ -85,18 +85,18 @@ export class DatabaseStorage implements IStorage {
     return updatedOrg;
   }
 
-  async deleteOrganization(id: number): Promise<boolean> {
+  async deleteOrganization(id: string): Promise<boolean> {
     const result = await db.delete(organizations).where(eq(organizations.id, id)).returning();
     return result.length > 0;
   }
 
   // Domain management
-  async getDomain(id: number): Promise<Domain | undefined> {
+  async getDomain(id: string): Promise<Domain | undefined> {
     const [domain] = await db.select().from(domains).where(eq(domains.id, id));
     return domain;
   }
 
-  async getDomainsByOrganization(organizationId: number): Promise<Domain[]> {
+  async getDomainsByOrganization(organizationId: string): Promise<Domain[]> {
     return await db.select()
       .from(domains)
       .where(eq(domains.organizationId, organizationId));
