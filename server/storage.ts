@@ -271,7 +271,20 @@ export class MemStorage implements IStorage {
     const id = this.recordIdCounter++;
     const createdAt = new Date();
     const lastUpdated = new Date();
-    const newRecord: DnsRecord = { id, ...record, lastUpdated, createdAt };
+    const newRecord: DnsRecord = { 
+      id,
+      domainId: record.domainId,
+      name: record.name,
+      type: record.type,
+      content: record.content,
+      ttl: record.ttl ?? 3600,
+      proxied: record.proxied ?? false,
+      isActive: record.isActive ?? true,
+      isAutoIP: record.isAutoIP ?? false,
+      notes: record.notes ?? null,
+      lastUpdated,
+      createdAt
+    };
     this.recordsMap.set(id, newRecord);
     return newRecord;
   }
@@ -305,7 +318,14 @@ export class MemStorage implements IStorage {
   async createProvider(provider: InsertProvider): Promise<Provider> {
     const id = this.providerIdCounter++;
     const createdAt = new Date();
-    const newProvider: Provider = { id, ...provider, createdAt };
+    const newProvider: Provider = { 
+      id,
+      name: provider.name,
+      type: provider.type,
+      credentials: provider.credentials ?? null,
+      isActive: provider.isActive ?? true,
+      createdAt 
+    };
     this.providersMap.set(id, newProvider);
     return newProvider;
   }
@@ -341,7 +361,17 @@ export class MemStorage implements IStorage {
   async createApiToken(token: InsertApiToken): Promise<ApiToken> {
     const id = this.apiTokenIdCounter++;
     const createdAt = new Date();
-    const newToken: ApiToken = { id, ...token, createdAt };
+    const newToken: ApiToken = { 
+      id,
+      name: token.name,
+      token: token.token,
+      organizationId: token.organizationId,
+      permissions: token.permissions ?? null,
+      createdBy: token.createdBy,
+      isActive: token.isActive ?? true,
+      expiresAt: token.expiresAt ?? null,
+      createdAt
+    };
     this.apiTokensMap.set(id, newToken);
     return newToken;
   }
@@ -374,9 +404,9 @@ export class MemStorage implements IStorage {
       id,
       recordId,
       action,
-      previousValue,
-      newValue,
-      userId,
+      previousValue: previousValue ?? null,
+      newValue: newValue ?? null,
+      userId: userId ?? null,
       timestamp
     };
     

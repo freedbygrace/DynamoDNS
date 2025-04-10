@@ -60,6 +60,8 @@ export const dnsRecords = pgTable("dns_records", {
   ttl: integer("ttl").default(3600),
   proxied: boolean("proxied").default(false),
   isActive: boolean("is_active").default(true).notNull(),
+  isAutoIP: boolean("is_auto_ip").default(false).notNull(),
+  notes: text("notes"),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -117,6 +119,8 @@ export const insertDnsRecordSchema = createInsertSchema(dnsRecords).pick({
   ttl: true,
   proxied: true,
   isActive: true,
+  isAutoIP: true,
+  notes: true,
 });
 
 export const insertProviderSchema = createInsertSchema(providers).pick({
