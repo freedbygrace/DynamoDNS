@@ -142,7 +142,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       isActive: true,
       isAutoIP: false,
       notes: "",
-      providerId: undefined,
     },
   });
 
@@ -153,12 +152,9 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       const recordData: InsertDnsRecord = {
         ...data,
         domainId: domain.id,
+        // Inherit providerId from domain
+        providerId: domain.providerId
       };
-      
-      // Handle providerId - convert "none" to null
-      if (recordData.providerId === "none") {
-        recordData.providerId = null;
-      }
       
       const res = await apiRequest("POST", "/api/dns-records", recordData);
       return await res.json();
@@ -186,12 +182,13 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
     mutationFn: async (data: z.infer<typeof dnsRecordSchema> & { id: string }) => {
       const { id, ...updateData } = data;
       
-      // Handle providerId - convert "none" to null
-      if (updateData.providerId === "none") {
-        updateData.providerId = null;
-      }
+      // Always use domain's provider for the record
+      const updatedData = {
+        ...updateData,
+        providerId: domain.providerId
+      };
       
-      const res = await apiRequest("PUT", `/api/dns-records/${id}`, updateData);
+      const res = await apiRequest("PUT", `/api/dns-records/${id}`, updatedData);
       return await res.json();
     },
     onSuccess: () => {
@@ -253,14 +250,13 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
     // Set form values for editing
     form.reset({
       name: record.name,
-      type: record.type,
+      type: record.type as any, // Type cast to handle compatibility
       content: record.content,
-      ttl: record.ttl,
-      proxied: record.proxied,
+      ttl: record.ttl as number, // Type cast to handle nullable
+      proxied: record.proxied as boolean, // Type cast to handle nullable
       isActive: record.isActive,
       isAutoIP: record.isAutoIP,
       notes: record.notes || "",
-      providerId: record.providerId || "none",
     });
     
     setIsEditRecordDialogOpen(true);
@@ -304,7 +300,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       isActive: true,
       isAutoIP: false,
       notes: "",
-      providerId: "none",
     });
     setIsAddRecordDialogOpen(true);
   };
