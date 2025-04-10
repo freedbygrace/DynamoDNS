@@ -5,7 +5,8 @@ import {
   type DnsRecord, type InsertDnsRecord,
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
-  type DnsHistory
+  type DnsHistory,
+  type Webhook, type InsertWebhook
 } from "@shared/schema";
 import session from "express-session";
 import { DatabaseStorage } from "./database-storage";
@@ -61,6 +62,14 @@ export interface IStorage {
   getDnsHistoryByRecord(recordId: string): Promise<DnsHistory[]>;
   getDnsHistoryByDomain(domainId: string): Promise<DnsHistory[]>;
   
+  // Webhook management
+  getWebhook(id: string): Promise<Webhook | undefined>;
+  getWebhooksByOrganization(organizationId: string): Promise<Webhook[]>;
+  createWebhook(webhook: InsertWebhook): Promise<Webhook>;
+  updateWebhook(id: string, webhook: Partial<InsertWebhook>): Promise<Webhook | undefined>;
+  deleteWebhook(id: string): Promise<boolean>;
+  triggerWebhook(webhookId: string, payload: any): Promise<boolean>;
+  
   // Session store
   sessionStore: any;
 }
@@ -73,6 +82,7 @@ export class MemStorage implements IStorage {
   private providersMap: Map<number, Provider>;
   private apiTokensMap: Map<number, ApiToken>;
   private historyMap: Map<number, DnsHistory>;
+  private webhooksMap: Map<number, Webhook>;
   
   // Counters for IDs
   private userIdCounter: number;
@@ -82,6 +92,7 @@ export class MemStorage implements IStorage {
   private providerIdCounter: number;
   private apiTokenIdCounter: number;
   private historyIdCounter: number;
+  private webhookIdCounter: number;
   
   public sessionStore: any;
 
@@ -93,6 +104,7 @@ export class MemStorage implements IStorage {
     this.providersMap = new Map();
     this.apiTokensMap = new Map();
     this.historyMap = new Map();
+    this.webhooksMap = new Map();
     
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
@@ -101,6 +113,7 @@ export class MemStorage implements IStorage {
     this.providerIdCounter = 1;
     this.apiTokenIdCounter = 1;
     this.historyIdCounter = 1;
+    this.webhookIdCounter = 1;
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -435,6 +448,71 @@ export class MemStorage implements IStorage {
     return Array.from(this.historyMap.values())
       .filter(history => recordIds.includes(history.recordId))
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  // Webhook management
+  async getWebhook(id: string): Promise<Webhook | undefined> {
+    return this.webhooksMap.get(parseInt(id));
+  }
+
+  async getWebhooksByOrganization(organizationId: string): Promise<Webhook[]> {
+    return Array.from(this.webhooksMap.values())
+      .filter(webhook => webhook.organizationId === organizationId);
+  }
+
+  async createWebhook(webhook: InsertWebhook): Promise<Webhook> {
+    const numId = this.webhookIdCounter++;
+    const createdAt = new Date();
+    const newWebhook: Webhook = {
+      id: numId.toString(),
+      name: webhook.name,
+      url: webhook.url,
+      organizationId: webhook.organizationId,
+      secret: webhook.secret ?? null,
+      events: webhook.events,
+      isActive: webhook.isActive ?? true,
+      lastTriggered: null,
+      createdBy: webhook.createdBy,
+      createdAt
+    };
+    this.webhooksMap.set(numId, newWebhook);
+    return newWebhook;
+  }
+
+  async updateWebhook(id: string, webhookData: Partial<InsertWebhook>): Promise<Webhook | undefined> {
+    const numId = parseInt(id);
+    const webhook = await this.getWebhook(id);
+    if (!webhook) return undefined;
+    
+    const updatedWebhook = { ...webhook, ...webhookData };
+    this.webhooksMap.set(numId, updatedWebhook);
+    return updatedWebhook;
+  }
+
+  async deleteWebhook(id: string): Promise<boolean> {
+    return this.webhooksMap.delete(parseInt(id));
+  }
+
+  async triggerWebhook(webhookId: string, payload: any): Promise<boolean> {
+    const webhook = await this.getWebhook(webhookId);
+    if (!webhook || !webhook.isActive) return false;
+
+    try {
+      // In a real implementation, this would make an HTTP request to the webhook URL
+      console.log(`Triggering webhook ${webhook.name} (${webhook.id}) with payload:`, payload);
+      
+      // Update the lastTriggered timestamp
+      const updatedWebhook = { 
+        ...webhook, 
+        lastTriggered: new Date() 
+      };
+      this.webhooksMap.set(parseInt(webhookId), updatedWebhook);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error triggering webhook ${webhook.id}:`, error);
+      return false;
+    }
   }
 }
 
