@@ -46,9 +46,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 
+// Domain name regex
+const domainRegex = /^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,}$/;
+
 // Domain form schema
 const domainFormSchema = z.object({
-  name: z.string().min(3, "Domain name must be at least 3 characters"),
+  name: z.string()
+    .min(3, "Domain name must be at least 3 characters")
+    .regex(domainRegex, "Please enter a valid domain name (e.g., example.com)"),
   providerId: z.string().uuid().optional(),
   isActive: z.boolean().default(true),
 });

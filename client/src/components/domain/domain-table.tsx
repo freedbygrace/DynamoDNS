@@ -44,30 +44,35 @@ export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: Dom
   });
 
   const getProviderName = (providerId: string | null | undefined) => {
-    // Special debugging logs
-    console.log("Provider ID:", providerId);
-    console.log("Available providers:", providers);
-    
-    if (!providerId) return "None";
+    // Handle completely empty providerId cases
+    if (!providerId || providerId === "") {
+      return "None";
+    }
     
     // Check if the provider exists in our providers list
+    // The providerId from the database will be a string UUID
     const provider = providers.find(p => p.id === providerId);
     
     if (provider) {
-      console.log("Found provider:", provider);
       return provider.name;
     } else {
-      console.log("Provider not found for ID:", providerId);
-      return "Unknown";
+      // If we have a providerId but can't find the provider (might be deleted)
+      return "Unknown Provider";
     }
   };
 
   const getProviderIcon = (providerId: string | null | undefined) => {
-    if (!providerId) return <CircleHelp className="mr-2 text-primary" size={16} />;
+    // Handle completely empty providerId cases
+    if (!providerId || providerId === "") {
+      return <CircleHelp className="mr-2 text-muted-foreground" size={16} />;
+    }
     
+    // The providerId from the database will be a string UUID
     const provider = providers.find(p => p.id === providerId);
     
-    if (!provider) return <CircleHelp className="mr-2 text-primary" size={16} />;
+    if (!provider) {
+      return <CircleHelp className="mr-2 text-warning" size={16} />;
+    }
     
     switch (provider.type) {
       case "cloudflare":
