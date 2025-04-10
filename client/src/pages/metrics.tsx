@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layouts/main-layout";
 import { DnsUpdateChart } from "@/components/charts/dns-update-chart";
 import { ProviderDistributionChart } from "@/components/charts/provider-distribution-chart";
 import { RecordTypeChart } from "@/components/charts/record-type-chart";
-import { Domain, DnsRecord } from "@shared/schema";
+import { Domain, DnsMetric } from "@shared/schema";
 import { useOrganization } from "@/context/organization-context";
 import {
   Card,
@@ -39,10 +39,45 @@ export default function MetricsPage() {
     enabled: !!currentOrganization?.id,
   });
 
-  // Fetch DNS records stats (would be from actual API)
-  const { data: recordsStats } = useQuery({
-    queryKey: ["/api/metrics/records", selectedTimeframe, selectedDomain],
-    enabled: false, // Would be enabled in a real implementation
+  // Calculate date range for metrics queries
+  const getDateRange = () => {
+    const endDate = new Date();
+    let startDate = new Date();
+    
+    if (selectedTimeframe === "day") {
+      startDate.setDate(startDate.getDate() - 1);
+    } else if (selectedTimeframe === "week") {
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (selectedTimeframe === "month") {
+      startDate.setMonth(startDate.getMonth() - 1);
+    }
+    
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+  };
+  
+  const { startDate, endDate } = getDateRange();
+  
+  // Fetch DNS metrics for the performance cards
+  const { data: performanceMetrics = [] } = useQuery<DnsMetric[]>({
+    queryKey: ["/api/dns-metrics", "performance", startDate, endDate],
+    queryFn: async () => {
+      const url = new URL("/api/dns-metrics", window.location.origin);
+      url.searchParams.append("type", "performance");
+      url.searchParams.append("startDate", startDate);
+      url.searchParams.append("endDate", endDate);
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch performance metrics");
+      }
+      
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
   return (
@@ -108,7 +143,7 @@ export default function MetricsPage() {
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <DnsUpdateChart timeframe={selectedTimeframe} domainId={selectedDomain !== "all" ? parseInt(selectedDomain) : undefined} />
+            <DnsUpdateChart timeframe={selectedTimeframe} domainId={selectedDomain !== "all" ? selectedDomain : undefined} />
           </div>
         </CardContent>
       </Card>

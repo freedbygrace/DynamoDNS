@@ -14,68 +14,175 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { DnsMetric } from "@shared/schema";
 
 interface DnsUpdateChartProps {
   timeframe?: string;
-  domainId?: number;
+  domainId?: string;
+}
+
+interface ChartDataPoint {
+  time: string;
+  updates: number;
 }
 
 export function DnsUpdateChart({ 
   timeframe = "day",
   domainId 
 }: DnsUpdateChartProps) {
-  // This would be a real API query in a production app
-  // For this MVP, we'll generate sample data
+  // Calculate the date range based on timeframe
+  const getDateRange = () => {
+    const endDate = new Date();
+    let startDate = new Date();
+    
+    if (timeframe === "day") {
+      startDate.setDate(startDate.getDate() - 1);
+    } else if (timeframe === "week") {
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (timeframe === "month") {
+      startDate.setMonth(startDate.getMonth() - 1);
+    }
+    
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+  };
+  
+  const { startDate, endDate } = getDateRange();
   
   // Create a query key that includes the timeframe and domainId
-  const queryKey = ["/api/metrics/dns-updates", timeframe, domainId];
+  const queryKey = domainId ? 
+    ["/api/dns-metrics/domain", domainId, timeframe, startDate, endDate] : 
+    ["/api/dns-metrics", timeframe, startDate, endDate];
   
-  // In a real app, this would fetch data from the API
-  const { data: chartData, isLoading } = useQuery({
+  // Use the actual DNS metrics API endpoint
+  const { data: metricsData, isLoading } = useQuery<DnsMetric[]>({
     queryKey,
-    queryFn: async () => generateSampleData(timeframe),
+    queryFn: async () => {
+      const baseUrl = domainId ? 
+        `/api/dns-metrics/domain/${domainId}` : 
+        "/api/dns-metrics";
+        
+      const url = new URL(baseUrl, window.location.origin);
+      url.searchParams.append("type", "update");
+      url.searchParams.append("startDate", startDate);
+      url.searchParams.append("endDate", endDate);
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch DNS metrics");
+      }
+      
+      return response.json();
+    },
     // Keep data fresh for 5 minutes
     staleTime: 5 * 60 * 1000,
   });
   
-  // Generate sample data based on timeframe
-  // In a real application, this would come from the API
-  const generateSampleData = (timeframe: string) => {
-    const data = [];
+  // Transform the metrics data into chart format
+  const transformMetricsToChartData = (metrics: DnsMetric[] | undefined): ChartDataPoint[] => {
+    if (!metrics || metrics.length === 0) {
+      return generateFallbackData(timeframe);
+    }
+    
+    // Group metrics by time period (hour, day, or week)
+    const groupedData = new Map<string, number>();
+    
+    metrics.forEach((metric) => {
+      const date = new Date(metric.timestamp);
+      let timeKey: string;
+      
+      if (timeframe === "day") {
+        // Group by hour
+        timeKey = `${date.getHours().toString().padStart(2, "0")}:00`;
+      } else if (timeframe === "week") {
+        // Group by day
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        timeKey = days[date.getDay()];
+      } else {
+        // Group by week for month view
+        const weekOfMonth = Math.ceil((date.getDate() + (new Date(date.getFullYear(), date.getMonth(), 1).getDay())) / 7);
+        timeKey = `Week ${weekOfMonth}`;
+      }
+      
+      // Increment the count for this time period
+      groupedData.set(timeKey, (groupedData.get(timeKey) || 0) + 1);
+    });
+    
+    // Convert the map to an array of data points
+    const result: ChartDataPoint[] = [];
+    
+    if (timeframe === "day") {
+      // Ensure all 24 hours are represented
+      for (let i = 0; i < 24; i++) {
+        const hour = `${i.toString().padStart(2, "0")}:00`;
+        result.push({
+          time: hour,
+          updates: groupedData.get(hour) || 0
+        });
+      }
+    } else if (timeframe === "week") {
+      // Ensure all 7 days are represented
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      days.forEach(day => {
+        result.push({
+          time: day,
+          updates: groupedData.get(day) || 0
+        });
+      });
+    } else {
+      // For month, ensure all weeks are represented
+      for (let i = 1; i <= 4; i++) {
+        const week = `Week ${i}`;
+        result.push({
+          time: week,
+          updates: groupedData.get(week) || 0
+        });
+      }
+    }
+    
+    return result;
+  };
+  
+  // Generate fallback data when no metrics are available
+  const generateFallbackData = (timeframe: string): ChartDataPoint[] => {
+    const data: ChartDataPoint[] = [];
     
     if (timeframe === "day") {
       // Generate hourly data for a day
       for (let i = 0; i < 24; i++) {
         const hour = i.toString().padStart(2, "0") + ":00";
-        const updateCount = Math.floor(Math.random() * 10) + 1;
         data.push({
           time: hour,
-          updates: updateCount,
+          updates: 0,
         });
       }
     } else if (timeframe === "week") {
       // Generate daily data for a week
-      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       for (let i = 0; i < 7; i++) {
-        const updateCount = Math.floor(Math.random() * 50) + 10;
         data.push({
           time: days[i],
-          updates: updateCount,
+          updates: 0,
         });
       }
     } else if (timeframe === "month") {
       // Generate weekly data for a month
       for (let i = 1; i <= 4; i++) {
-        const updateCount = Math.floor(Math.random() * 200) + 50;
         data.push({
           time: `Week ${i}`,
-          updates: updateCount,
+          updates: 0,
         });
       }
     }
     
     return data;
   };
+  
+  // Process the metrics data for the chart
+  const chartData = transformMetricsToChartData(metricsData);
 
   if (isLoading) {
     return (
