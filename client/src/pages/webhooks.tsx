@@ -105,16 +105,16 @@ export default function WebhooksPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["/api/webhooks", selectedOrganization?.id],
+    queryKey: ["/api/webhooks", currentOrganization?.id],
     queryFn: async () => {
-      if (!selectedOrganization) return [];
+      if (!currentOrganization) return [];
       const res = await apiRequest(
         "GET",
-        `/api/webhooks?organizationId=${selectedOrganization.id}`
+        `/api/webhooks?organizationId=${currentOrganization.id}`
       );
       return await res.json();
     },
-    enabled: !!selectedOrganization,
+    enabled: !!currentOrganization,
   });
 
   // Create webhook mutation
@@ -122,7 +122,7 @@ export default function WebhooksPage() {
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/webhooks", {
         ...data,
-        organizationId: selectedOrganization?.id,
+        organizationId: currentOrganization?.id,
       });
       return await res.json();
     },
@@ -132,7 +132,7 @@ export default function WebhooksPage() {
         description: "The webhook has been created successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", selectedOrganization?.id],
+        queryKey: ["/api/webhooks", currentOrganization?.id],
       });
       setIsCreateOpen(false);
       resetForm();
@@ -158,7 +158,7 @@ export default function WebhooksPage() {
         description: "The webhook has been updated successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", selectedOrganization?.id],
+        queryKey: ["/api/webhooks", currentOrganization?.id],
       });
       setIsEditOpen(false);
       resetForm();
@@ -183,7 +183,7 @@ export default function WebhooksPage() {
         description: "The webhook has been deleted successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", selectedOrganization?.id],
+        queryKey: ["/api/webhooks", currentOrganization?.id],
       });
       setIsDeleteOpen(false);
       setCurrentWebhook(null);
@@ -281,7 +281,7 @@ export default function WebhooksPage() {
   ];
 
   // Helper to format the date
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleString();
   };
@@ -370,7 +370,7 @@ export default function WebhooksPage() {
                       </TableCell>
                       <TableCell>
                         {webhook.isActive ? (
-                          <Badge variant="success">Active</Badge>
+                          <Badge className="bg-green-500 text-white">Active</Badge>
                         ) : (
                           <Badge variant="secondary">Inactive</Badge>
                         )}
@@ -700,7 +700,7 @@ export default function WebhooksPage() {
           <div className="py-4">
             <div className="flex items-center mb-4 gap-2">
               {testResult?.success ? (
-                <Badge variant="success" className="px-2 py-1">
+                <Badge className="bg-green-500 text-white px-2 py-1">
                   <Check className="h-4 w-4 mr-1" />
                   Success
                 </Badge>
