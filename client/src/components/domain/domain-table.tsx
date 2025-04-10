@@ -44,9 +44,22 @@ export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: Dom
   });
 
   const getProviderName = (providerId: string | null | undefined) => {
+    // Special debugging logs
+    console.log("Provider ID:", providerId);
+    console.log("Available providers:", providers);
+    
     if (!providerId) return "None";
+    
+    // Check if the provider exists in our providers list
     const provider = providers.find(p => p.id === providerId);
-    return provider?.name || "Unknown";
+    
+    if (provider) {
+      console.log("Found provider:", provider);
+      return provider.name;
+    } else {
+      console.log("Provider not found for ID:", providerId);
+      return "Unknown";
+    }
   };
 
   const getProviderIcon = (providerId: string | null | undefined) => {

@@ -295,7 +295,7 @@ export default function DnsRecordsPage() {
 
   return (
     <MainLayout
-      title={`DNS Records ${domain ? `for ${domain.name}` : ''}`}
+      title={domain?.name ? `DNS Records for ${domain.name}` : 'DNS Records'} 
       description="Manage DNS records for your domain."
     >
       {/* Breadcrumb */}
@@ -306,7 +306,7 @@ export default function DnsRecordsPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">{domain?.name || 'Loading...'}</BreadcrumbLink>
+            <BreadcrumbLink href="#">{domain?.name || 'Domain'}</BreadcrumbLink>
           </BreadcrumbItem>
         </Breadcrumb>
       </div>
