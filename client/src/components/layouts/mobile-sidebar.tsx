@@ -76,6 +76,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       roles: ["admin"],
     },
     {
+      title: "Groups",
+      href: "/groups",
+      icon: <Users className="w-5 h-5 mr-3" />,
+      roles: ["admin", "manager"],
+    },
+    {
       title: "Webhooks",
       href: "/webhooks",
       icon: <Webhook className="w-5 h-5 mr-3" />,
