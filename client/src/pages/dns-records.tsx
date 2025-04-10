@@ -81,14 +81,14 @@ const dnsRecordSchema = z.object({
 
 export default function DnsRecordsPage() {
   const { toast } = useToast();
-  const [domainId, setDomainId] = useState<number | null>(null);
+  const [domainId, setDomainId] = useState<string | null>(null);
   
   // Get domainId from query params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("domainId");
     if (id) {
-      setDomainId(parseInt(id));
+      setDomainId(id);
     }
   }, []);
 
@@ -186,7 +186,7 @@ export default function DnsRecordsPage() {
 
   // Update DNS record mutation
   const updateRecordMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof dnsRecordSchema> }) => {
+    mutationFn: async ({ id, data }: { id: string, data: z.infer<typeof dnsRecordSchema> }) => {
       const res = await apiRequest("PUT", `/api/dns-records/${id}`, data);
       return await res.json();
     },
@@ -210,7 +210,7 @@ export default function DnsRecordsPage() {
 
   // Delete DNS record mutation
   const deleteRecordMutation = useMutation({
-    mutationFn: async (recordId: number) => {
+    mutationFn: async (recordId: string) => {
       await apiRequest("DELETE", `/api/dns-records/${recordId}`);
     },
     onSuccess: () => {
