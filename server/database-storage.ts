@@ -94,29 +94,71 @@ export class DatabaseStorage implements IStorage {
 
   // Domain management
   async getDomain(id: string): Promise<Domain | undefined> {
-    const [domain] = await db.select().from(domains).where(eq(domains.id, id));
-    return domain;
+    try {
+      // Use raw SQL to avoid schema mismatches
+      const result = await db.execute(sql`
+        SELECT 
+          id, 
+          name, 
+          organization_id as "organizationId", 
+          is_active as "isActive", 
+          created_at as "createdAt"
+        FROM domains 
+        WHERE id = ${id}
+        LIMIT 1
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to Domain type with expected fields
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        organizationId: row.organizationId as string,
+        isActive: Boolean(row.isActive),
+        createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
+        providerId: '', // Default value for expected field
+        lastUpdated: null // Default value for expected field
+      };
+    } catch (error) {
+      console.error("Error fetching domain:", error);
+      return undefined;
+    }
   }
 
   async getDomainsByOrganization(organizationId: string): Promise<Domain[]> {
     try {
-      // Select only core columns that we know are in the schema to avoid errors
-      const results = await db.select({
-        id: domains.id,
-        name: domains.name,
-        organizationId: domains.organizationId,
-        isActive: domains.isActive,
-        createdAt: domains.createdAt,
-        // Provide a default providerId which is expected in the Domain type
-        providerId: sql`NULL::text as providerId`,
-        // Use null for potentially missing fields
-        lastUpdated: sql`NULL::timestamp as lastUpdated`
-      })
-      .from(domains)
-      .where(eq(domains.organizationId, organizationId))
-      .orderBy(domains.name);
+      // Use raw SQL to avoid Drizzle schema errors
+      const rawDomains = await db.execute(sql`
+        SELECT 
+          id, 
+          name, 
+          organization_id as "organizationId", 
+          is_active as "isActive", 
+          created_at as "createdAt" 
+        FROM domains 
+        WHERE organization_id = ${organizationId}
+        ORDER BY name
+      `);
       
-      return results;
+      if (!rawDomains.rows) {
+        return [];
+      }
+      
+      // Map the raw rows to Domain objects with the expected shape
+      return rawDomains.rows.map(row => ({
+        id: row.id as string,
+        name: row.name as string,
+        organizationId: row.organizationId as string,
+        isActive: Boolean(row.isActive),
+        createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
+        providerId: '', // Default value for expected field
+        lastUpdated: null // Default value for expected field
+      }));
     } catch (error) {
       console.error("Error fetching domains by organization:", error);
       return []; // Return empty array instead of crashing
@@ -125,22 +167,32 @@ export class DatabaseStorage implements IStorage {
 
   async getAllDomains(): Promise<Domain[]> {
     try {
-      // Select only specific columns to avoid issues with database schema changes/missing columns
-      const results = await db.select({
-        id: domains.id,
-        name: domains.name,
-        organizationId: domains.organizationId,
-        registrarId: domains.registrarId,
-        isActive: domains.isActive,
-        expiresAt: domains.expiresAt,
-        createdAt: domains.createdAt,
-        updatedAt: domains.updatedAt,
-        // Add any other known fields that should be part of the Domain type
-      })
-      .from(domains)
-      .orderBy(domains.name);
+      // Use simplest approach to avoid Drizzle errors with missing columns
+      const rawDomains = await db.execute(sql`
+        SELECT 
+          id, 
+          name, 
+          organization_id as "organizationId", 
+          is_active as "isActive", 
+          created_at as "createdAt" 
+        FROM domains 
+        ORDER BY name
+      `);
       
-      return results;
+      if (!rawDomains.rows) {
+        return [];
+      }
+      
+      // Map the raw rows to Domain objects
+      return rawDomains.rows.map(row => ({
+        id: row.id as string,
+        name: row.name as string,
+        organizationId: row.organizationId as string,
+        isActive: Boolean(row.isActive),
+        createdAt: row.createdAt ? new Date(row.createdAt as string) : new Date(),
+        providerId: '', // Default value for expected field
+        lastUpdated: null // Default value for expected field
+      }));
     } catch (error) {
       console.error("Error fetching domains:", error);
       return []; // Return empty array instead of crashing
