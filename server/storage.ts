@@ -128,8 +128,8 @@ export class MemStorage implements IStorage {
   }
 
   // Users
-  async getUser(id: number): Promise<User | undefined> {
-    return this.usersMap.get(id);
+  async getUser(id: string): Promise<User | undefined> {
+    return this.usersMap.get(parseInt(id));
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -161,22 +161,23 @@ export class MemStorage implements IStorage {
     return newUser;
   }
   
-  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const numId = parseInt(id);
     const user = await this.getUser(id);
     if (!user) return undefined;
     
     const updatedUser = { ...user, ...userData };
-    this.usersMap.set(id, updatedUser);
+    this.usersMap.set(numId, updatedUser);
     return updatedUser;
   }
   
-  async deleteUser(id: number): Promise<boolean> {
-    return this.usersMap.delete(id);
+  async deleteUser(id: string): Promise<boolean> {
+    return this.usersMap.delete(parseInt(id));
   }
   
   // Organizations
-  async getOrganization(id: number): Promise<Organization | undefined> {
-    return this.orgsMap.get(id);
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    return this.orgsMap.get(parseInt(id));
   }
   
   async getOrganizations(): Promise<Organization[]> {
@@ -187,7 +188,7 @@ export class MemStorage implements IStorage {
     const id = this.orgIdCounter++;
     const createdAt = new Date();
     const newOrg: Organization = {
-      id,
+      id: id.toString(),
       name: org.name,
       isActive: org.isActive ?? true,
       createdAt
@@ -196,25 +197,26 @@ export class MemStorage implements IStorage {
     return newOrg;
   }
   
-  async updateOrganization(id: number, orgData: Partial<InsertOrganization>): Promise<Organization | undefined> {
+  async updateOrganization(id: string, orgData: Partial<InsertOrganization>): Promise<Organization | undefined> {
+    const numId = parseInt(id);
     const org = await this.getOrganization(id);
     if (!org) return undefined;
     
     const updatedOrg = { ...org, ...orgData };
-    this.orgsMap.set(id, updatedOrg);
+    this.orgsMap.set(numId, updatedOrg);
     return updatedOrg;
   }
   
-  async deleteOrganization(id: number): Promise<boolean> {
-    return this.orgsMap.delete(id);
+  async deleteOrganization(id: string): Promise<boolean> {
+    return this.orgsMap.delete(parseInt(id));
   }
   
   // Domains
-  async getDomain(id: number): Promise<Domain | undefined> {
-    return this.domainsMap.get(id);
+  async getDomain(id: string): Promise<Domain | undefined> {
+    return this.domainsMap.get(parseInt(id));
   }
   
-  async getDomainsByOrganization(organizationId: number): Promise<Domain[]> {
+  async getDomainsByOrganization(organizationId: string): Promise<Domain[]> {
     return Array.from(this.domainsMap.values())
       .filter(domain => domain.organizationId === organizationId);
   }
@@ -228,7 +230,7 @@ export class MemStorage implements IStorage {
     const createdAt = new Date();
     const lastUpdated = new Date();
     const newDomain: Domain = { 
-      id,
+      id: id.toString(),
       name: domain.name,
       organizationId: domain.organizationId,
       providerId: domain.providerId,
@@ -240,7 +242,8 @@ export class MemStorage implements IStorage {
     return newDomain;
   }
   
-  async updateDomain(id: number, domainData: Partial<InsertDomain>): Promise<Domain | undefined> {
+  async updateDomain(id: string, domainData: Partial<InsertDomain>): Promise<Domain | undefined> {
+    const numId = parseInt(id);
     const domain = await this.getDomain(id);
     if (!domain) return undefined;
     
@@ -249,20 +252,20 @@ export class MemStorage implements IStorage {
       ...domainData,
       lastUpdated: new Date()
     };
-    this.domainsMap.set(id, updatedDomain);
+    this.domainsMap.set(numId, updatedDomain);
     return updatedDomain;
   }
   
-  async deleteDomain(id: number): Promise<boolean> {
-    return this.domainsMap.delete(id);
+  async deleteDomain(id: string): Promise<boolean> {
+    return this.domainsMap.delete(parseInt(id));
   }
   
   // DNS Records
-  async getDnsRecord(id: number): Promise<DnsRecord | undefined> {
-    return this.recordsMap.get(id);
+  async getDnsRecord(id: string): Promise<DnsRecord | undefined> {
+    return this.recordsMap.get(parseInt(id));
   }
   
-  async getDnsRecordsByDomain(domainId: number): Promise<DnsRecord[]> {
+  async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
     return Array.from(this.recordsMap.values())
       .filter(record => record.domainId === domainId);
   }
@@ -272,7 +275,7 @@ export class MemStorage implements IStorage {
     const createdAt = new Date();
     const lastUpdated = new Date();
     const newRecord: DnsRecord = { 
-      id,
+      id: id.toString(),
       domainId: record.domainId,
       name: record.name,
       type: record.type,
@@ -289,7 +292,8 @@ export class MemStorage implements IStorage {
     return newRecord;
   }
   
-  async updateDnsRecord(id: number, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
+  async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
+    const numId = parseInt(id);
     const record = await this.getDnsRecord(id);
     if (!record) return undefined;
     
@@ -298,17 +302,17 @@ export class MemStorage implements IStorage {
       ...recordData,
       lastUpdated: new Date()
     };
-    this.recordsMap.set(id, updatedRecord);
+    this.recordsMap.set(numId, updatedRecord);
     return updatedRecord;
   }
   
-  async deleteDnsRecord(id: number): Promise<boolean> {
-    return this.recordsMap.delete(id);
+  async deleteDnsRecord(id: string): Promise<boolean> {
+    return this.recordsMap.delete(parseInt(id));
   }
   
   // Providers
-  async getProvider(id: number): Promise<Provider | undefined> {
-    return this.providersMap.get(id);
+  async getProvider(id: string): Promise<Provider | undefined> {
+    return this.providersMap.get(parseInt(id));
   }
   
   async getProviders(): Promise<Provider[]> {
@@ -319,7 +323,7 @@ export class MemStorage implements IStorage {
     const id = this.providerIdCounter++;
     const createdAt = new Date();
     const newProvider: Provider = { 
-      id,
+      id: id.toString(),
       name: provider.name,
       type: provider.type,
       credentials: provider.credentials ?? null,
@@ -330,22 +334,23 @@ export class MemStorage implements IStorage {
     return newProvider;
   }
   
-  async updateProvider(id: number, providerData: Partial<InsertProvider>): Promise<Provider | undefined> {
+  async updateProvider(id: string, providerData: Partial<InsertProvider>): Promise<Provider | undefined> {
+    const numId = parseInt(id);
     const provider = await this.getProvider(id);
     if (!provider) return undefined;
     
     const updatedProvider = { ...provider, ...providerData };
-    this.providersMap.set(id, updatedProvider);
+    this.providersMap.set(numId, updatedProvider);
     return updatedProvider;
   }
   
-  async deleteProvider(id: number): Promise<boolean> {
-    return this.providersMap.delete(id);
+  async deleteProvider(id: string): Promise<boolean> {
+    return this.providersMap.delete(parseInt(id));
   }
   
   // API Tokens
-  async getApiToken(id: number): Promise<ApiToken | undefined> {
-    return this.apiTokensMap.get(id);
+  async getApiToken(id: string): Promise<ApiToken | undefined> {
+    return this.apiTokensMap.get(parseInt(id));
   }
   
   async getApiTokenByToken(token: string): Promise<ApiToken | undefined> {
@@ -353,7 +358,7 @@ export class MemStorage implements IStorage {
       .find(apiToken => apiToken.token === token);
   }
   
-  async getApiTokensByOrganization(organizationId: number): Promise<ApiToken[]> {
+  async getApiTokensByOrganization(organizationId: string): Promise<ApiToken[]> {
     return Array.from(this.apiTokensMap.values())
       .filter(token => token.organizationId === organizationId);
   }
@@ -362,7 +367,7 @@ export class MemStorage implements IStorage {
     const id = this.apiTokenIdCounter++;
     const createdAt = new Date();
     const newToken: ApiToken = { 
-      id,
+      id: id.toString(),
       name: token.name,
       token: token.token,
       organizationId: token.organizationId,
@@ -376,17 +381,18 @@ export class MemStorage implements IStorage {
     return newToken;
   }
   
-  async updateApiToken(id: number, tokenData: Partial<InsertApiToken>): Promise<ApiToken | undefined> {
+  async updateApiToken(id: string, tokenData: Partial<InsertApiToken>): Promise<ApiToken | undefined> {
+    const numId = parseInt(id);
     const token = await this.getApiToken(id);
     if (!token) return undefined;
     
     const updatedToken = { ...token, ...tokenData };
-    this.apiTokensMap.set(id, updatedToken);
+    this.apiTokensMap.set(numId, updatedToken);
     return updatedToken;
   }
   
-  async deleteApiToken(id: number): Promise<boolean> {
-    return this.apiTokensMap.delete(id);
+  async deleteApiToken(id: string): Promise<boolean> {
+    return this.apiTokensMap.delete(parseInt(id));
   }
   
   // DNS History
