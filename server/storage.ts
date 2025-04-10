@@ -145,10 +145,10 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
+    const numId = this.userIdCounter++;
     const createdAt = new Date();
     const newUser: User = { 
-      id, 
+      id: numId.toString(), 
       username: user.username,
       password: user.password,
       email: user.email,
@@ -157,7 +157,7 @@ export class MemStorage implements IStorage {
       organizationId: user.organizationId || null,
       createdAt
     };
-    this.usersMap.set(id, newUser);
+    this.usersMap.set(numId, newUser);
     return newUser;
   }
   
@@ -185,15 +185,15 @@ export class MemStorage implements IStorage {
   }
   
   async createOrganization(org: InsertOrganization): Promise<Organization> {
-    const id = this.orgIdCounter++;
+    const numId = this.orgIdCounter++;
     const createdAt = new Date();
     const newOrg: Organization = {
-      id: id.toString(),
+      id: numId.toString(),
       name: org.name,
       isActive: org.isActive ?? true,
       createdAt
     };
-    this.orgsMap.set(id, newOrg);
+    this.orgsMap.set(numId, newOrg);
     return newOrg;
   }
   
@@ -226,11 +226,11 @@ export class MemStorage implements IStorage {
   }
   
   async createDomain(domain: InsertDomain): Promise<Domain> {
-    const id = this.domainIdCounter++;
+    const numId = this.domainIdCounter++;
     const createdAt = new Date();
     const lastUpdated = new Date();
     const newDomain: Domain = { 
-      id: id.toString(),
+      id: numId.toString(),
       name: domain.name,
       organizationId: domain.organizationId,
       providerId: domain.providerId,
@@ -238,7 +238,7 @@ export class MemStorage implements IStorage {
       lastUpdated,
       createdAt
     };
-    this.domainsMap.set(id, newDomain);
+    this.domainsMap.set(numId, newDomain);
     return newDomain;
   }
   
@@ -271,11 +271,11 @@ export class MemStorage implements IStorage {
   }
   
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
-    const id = this.recordIdCounter++;
+    const numId = this.recordIdCounter++;
     const createdAt = new Date();
     const lastUpdated = new Date();
     const newRecord: DnsRecord = { 
-      id: id.toString(),
+      id: numId.toString(),
       domainId: record.domainId,
       name: record.name,
       type: record.type,
@@ -288,7 +288,7 @@ export class MemStorage implements IStorage {
       lastUpdated,
       createdAt
     };
-    this.recordsMap.set(id, newRecord);
+    this.recordsMap.set(numId, newRecord);
     return newRecord;
   }
   
@@ -320,17 +320,17 @@ export class MemStorage implements IStorage {
   }
   
   async createProvider(provider: InsertProvider): Promise<Provider> {
-    const id = this.providerIdCounter++;
+    const numId = this.providerIdCounter++;
     const createdAt = new Date();
     const newProvider: Provider = { 
-      id: id.toString(),
+      id: numId.toString(),
       name: provider.name,
       type: provider.type,
       credentials: provider.credentials ?? null,
       isActive: provider.isActive ?? true,
       createdAt 
     };
-    this.providersMap.set(id, newProvider);
+    this.providersMap.set(numId, newProvider);
     return newProvider;
   }
   
@@ -397,17 +397,17 @@ export class MemStorage implements IStorage {
   
   // DNS History
   async addDnsHistory(
-    recordId: number, 
+    recordId: string, 
     action: string, 
     previousValue?: string, 
     newValue?: string, 
-    userId?: number
+    userId?: string
   ): Promise<DnsHistory> {
     const id = this.historyIdCounter++;
     const timestamp = new Date();
     
     const historyEntry: DnsHistory = {
-      id,
+      id: id.toString(),
       recordId,
       action,
       previousValue: previousValue ?? null,
@@ -420,13 +420,13 @@ export class MemStorage implements IStorage {
     return historyEntry;
   }
   
-  async getDnsHistoryByRecord(recordId: number): Promise<DnsHistory[]> {
+  async getDnsHistoryByRecord(recordId: string): Promise<DnsHistory[]> {
     return Array.from(this.historyMap.values())
       .filter(history => history.recordId === recordId)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
   
-  async getDnsHistoryByDomain(domainId: number): Promise<DnsHistory[]> {
+  async getDnsHistoryByDomain(domainId: string): Promise<DnsHistory[]> {
     // Get all records for domain
     const records = await this.getDnsRecordsByDomain(domainId);
     const recordIds = records.map(r => r.id);
