@@ -34,6 +34,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       icon: <LayoutDashboard className="w-5 h-5 mr-3" />,
     },
     {
+      title: "Organizations",
+      href: "/organizations",
+      icon: <Users className="w-5 h-5 mr-3" />,
+    },
+    {
       title: "Domains",
       href: "/domains",
       icon: <Home className="w-5 h-5 mr-3" />,
@@ -127,9 +132,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <a
+                <div
                   className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
                     location === item.href
                       ? "bg-primary text-primary-foreground"
                       : "hover:bg-accent hover:text-accent-foreground"
@@ -138,7 +143,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 >
                   {item.icon}
                   {item.title}
-                </a>
+                </div>
               </Link>
             ))}
             
@@ -149,9 +154,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 </div>
                 {filteredAdminItems.map((item) => (
                   <Link key={item.href} href={item.href}>
-                    <a
+                    <div
                       className={cn(
-                        "mt-1 flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                        "mt-1 flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
                         location === item.href
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent hover:text-accent-foreground"
@@ -160,7 +165,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                     >
                       {item.icon}
                       {item.title}
-                    </a>
+                    </div>
                   </Link>
                 ))}
               </div>

@@ -4,6 +4,7 @@ import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainStatusCard } from "@/components/domain/domain-status-card";
 import { DomainTable } from "@/components/domain/domain-table";
 import { RecentActivity } from "@/components/activity/recent-activity";
+import { PublicIpCard } from "@/components/shared/public-ip-card";
 import { DnsUpdateChart } from "@/components/charts/dns-update-chart";
 import { ProviderDistributionChart } from "@/components/charts/provider-distribution-chart";
 import { RecordTypeChart } from "@/components/charts/record-type-chart";
@@ -75,6 +76,11 @@ export default function DashboardPage() {
           icon={<AlertCircle className="h-6 w-6" />}
           iconClassName="bg-destructive/10 text-destructive" 
         />
+      </div>
+
+      {/* Public IP Information */}
+      <div className="mb-8">
+        <PublicIpCard />
       </div>
 
       {/* Recent Activity and DNS Update Chart */}
