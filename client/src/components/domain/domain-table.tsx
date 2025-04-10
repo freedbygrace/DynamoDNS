@@ -203,9 +203,12 @@ export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: Dom
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Link href={`/dns-records?domainId=${domain.id}`}>
-                    <div className="text-primary hover:underline cursor-pointer">View Records</div>
-                  </Link>
+                  <div 
+                    className="text-primary hover:underline cursor-pointer"
+                    onClick={() => onManageDomain && onManageDomain(domain)}
+                  >
+                    View Records
+                  </div>
                 </TableCell>
                 <TableCell>
                   {domain.lastUpdated 
