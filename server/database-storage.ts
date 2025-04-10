@@ -272,8 +272,13 @@ export class DatabaseStorage implements IStorage {
 
   // Webhook management
   async getWebhook(id: string): Promise<Webhook | undefined> {
-    const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
-    return webhook;
+    try {
+      const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
+      return webhook;
+    } catch (error) {
+      console.error("Error fetching webhook:", error);
+      return undefined;
+    }
   }
 
   async getWebhooksByOrganization(organizationId: string): Promise<Webhook[]> {
@@ -372,15 +377,42 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getWebhookDeliveryLog(id: string): Promise<WebhookDeliveryLog | undefined> {
-    const [log] = await db.select().from(webhookDeliveryLogs).where(eq(webhookDeliveryLogs.id, id));
-    return log;
+    try {
+      const [log] = await db.select().from(webhookDeliveryLogs).where(eq(webhookDeliveryLogs.id, id));
+      return log;
+    } catch (error) {
+      console.error("Error fetching webhook delivery log:", error);
+      return undefined;
+    }
   }
   
   async getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]> {
-    return await db.select()
+    try {
+      // Use a specific select list to avoid potential schema issues
+      // Only select columns that we know exist in the database
+      const logs = await db.select({
+        id: webhookDeliveryLogs.id,
+        webhookId: webhookDeliveryLogs.webhookId,
+        status: webhookDeliveryLogs.status,
+        statusCode: webhookDeliveryLogs.statusCode,
+        message: webhookDeliveryLogs.message,
+        payload: webhookDeliveryLogs.payload,
+        responseBody: webhookDeliveryLogs.responseBody,
+        retryCount: webhookDeliveryLogs.retryCount,
+        createdAt: webhookDeliveryLogs.createdAt,
+        signature: webhookDeliveryLogs.signature,
+        // Use null for potentially missing fields
+        event: sql`NULL as event`
+      })
       .from(webhookDeliveryLogs)
       .where(eq(webhookDeliveryLogs.webhookId, webhookId))
       .orderBy(desc(webhookDeliveryLogs.createdAt));
+      
+      return logs;
+    } catch (error) {
+      console.error("Error fetching webhook delivery logs:", error);
+      return []; // Return empty array on error
+    }
   }
 
   // DNS Metrics
