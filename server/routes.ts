@@ -73,6 +73,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
 
+  // DNS Records routes
+  app.get("/api/dns-records", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const domainId = req.query.domainId as string;
+      
+      if (!domainId) {
+        return res.status(400).json({ message: "Domain ID is required" });
+      }
+      
+      const records = await storage.getDnsRecordsByDomain(domainId);
+      res.json(records);
+    } catch (error) {
+      console.error("Error fetching DNS records:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/dns-records/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const recordId = req.params.id;
+      const record = await storage.getDnsRecord(recordId);
+      
+      if (!record) {
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      res.json(record);
+    } catch (error) {
+      console.error("Error fetching DNS record:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/dns-records", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const validatedData = insertDnsRecordSchema.parse(req.body);
+      
+      // Convert "none" to null for providerId if present
+      if (validatedData.providerId === "none") {
+        validatedData.providerId = null;
+      }
+      
+      // Get domain to retrieve providerId if not provided
+      if (!validatedData.providerId) {
+        const domain = await storage.getDomain(validatedData.domainId);
+        if (domain) {
+          validatedData.providerId = domain.providerId;
+        }
+      }
+      
+      try {
+        const record = await storage.createDnsRecord(validatedData);
+        
+        // Track history
+        await storage.addDnsHistory(
+          record.id,
+          "create",
+          undefined,
+          JSON.stringify(record),
+          req.user?.id
+        );
+        
+        // Trigger webhooks
+        await triggerDnsWebhooks("create", record.domainId, record, null, req.user?.id);
+        
+        res.status(201).json(record);
+      } catch (error) {
+        console.error("Error creating DNS record:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error creating DNS record:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.put("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const recordId = req.params.id;
+      const validatedData = insertDnsRecordSchema.partial().parse(req.body);
+      
+      // Convert "none" to null for providerId if present
+      if (validatedData.providerId === "none") {
+        validatedData.providerId = null;
+      }
+      
+      // Get current record for history
+      const currentRecord = await storage.getDnsRecord(recordId);
+      if (!currentRecord) {
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      // Get domain to retrieve providerId if needed
+      if (!validatedData.providerId) {
+        const domain = await storage.getDomain(currentRecord.domainId);
+        if (domain) {
+          validatedData.providerId = domain.providerId;
+        }
+      }
+      
+      const record = await storage.updateDnsRecord(recordId, validatedData);
+      
+      if (!record) {
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      // Track history
+      await storage.addDnsHistory(
+        recordId,
+        "update",
+        JSON.stringify(currentRecord),
+        JSON.stringify(record),
+        req.user?.id
+      );
+      
+      // Trigger webhooks
+      await triggerDnsWebhooks("update", record.domainId, record, currentRecord, req.user?.id);
+      
+      res.json(record);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error updating DNS record:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.delete("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const recordId = req.params.id;
+      
+      // Get current record for history and webhooks
+      const currentRecord = await storage.getDnsRecord(recordId);
+      if (!currentRecord) {
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      const success = await storage.deleteDnsRecord(recordId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      // Track history
+      await storage.addDnsHistory(
+        recordId,
+        "delete",
+        JSON.stringify(currentRecord),
+        undefined,
+        req.user?.id
+      );
+      
+      // Trigger webhooks
+      await triggerDnsWebhooks("delete", currentRecord.domainId, null, currentRecord, req.user?.id);
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting DNS record:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Organizations
@@ -263,186 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DNS Records
-  app.get("/api/dns-records", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
-    try {
-      const domainId = req.query.domainId ? parseInt(req.query.domainId as string) : undefined;
-      
-      if (!domainId) {
-        return res.status(400).json({ message: "Domain ID is required" });
-      }
-      
-      const records = await storage.getDnsRecordsByDomain(domainId);
-      res.json(records);
-    } catch (error) {
-      console.error("Error fetching DNS records:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.get("/api/dns-records/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const record = await storage.getDnsRecord(id);
-      
-      if (!record) {
-        return res.status(404).json({ message: "DNS record not found" });
-      }
-      
-      res.json(record);
-    } catch (error) {
-      console.error("Error fetching DNS record:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post("/api/dns-records", requireRole(["admin", "manager", "user"]), async (req, res) => {
-    try {
-      // Validate record type
-      const recordTypeValidator = z.enum(recordTypes);
-      
-      // Extend schema with validation
-      const schema = insertDnsRecordSchema.extend({
-        type: recordTypeValidator
-      });
-      
-      const validatedData = schema.parse(req.body);
-      
-      // Get the previous record if it exists
-      let previousRecord = null;
-      const records = await storage.getDnsRecordsByDomain(validatedData.domainId);
-      previousRecord = records.find(r => r.name === validatedData.name && r.type === validatedData.type);
-      
-      // Create the new record
-      const record = await storage.createDnsRecord(validatedData);
-      
-      // Add to history
-      await storage.addDnsHistory(
-        record.id,
-        "create",
-        previousRecord ? JSON.stringify(previousRecord) : undefined,
-        JSON.stringify(record),
-        req.user?.id
-      );
-      
-      // Trigger webhooks
-      await triggerDnsWebhooks(
-        "create",
-        record.domainId,
-        record,
-        previousRecord,
-        req.user?.id || null
-      );
-      
-      res.status(201).json(record);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Validation error", errors: error.errors });
-      } else {
-        console.error("Error creating DNS record:", error);
-        res.status(500).json({ message: "Internal server error" });
-      }
-    }
-  });
-
-  app.put("/api/dns-records/:id", requireRole(["admin", "manager", "user"]), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      
-      // Get the previous record
-      const previousRecord = await storage.getDnsRecord(id);
-      
-      if (!previousRecord) {
-        return res.status(404).json({ message: "DNS record not found" });
-      }
-      
-      // Validate record type
-      const recordTypeValidator = z.enum(recordTypes);
-      
-      // Extend schema with validation
-      const schema = insertDnsRecordSchema.partial().extend({
-        type: recordTypeValidator.optional()
-      });
-      
-      const validatedData = schema.parse(req.body);
-      
-      // Update the record
-      const updatedRecord = await storage.updateDnsRecord(id, validatedData);
-      
-      if (!updatedRecord) {
-        return res.status(404).json({ message: "DNS record not found" });
-      }
-      
-      // Add to history
-      await storage.addDnsHistory(
-        id,
-        "update",
-        JSON.stringify(previousRecord),
-        JSON.stringify(updatedRecord),
-        req.user?.id
-      );
-      
-      // Trigger webhooks
-      await triggerDnsWebhooks(
-        "update",
-        updatedRecord.domainId,
-        updatedRecord,
-        previousRecord,
-        req.user?.id || null
-      );
-      
-      res.json(updatedRecord);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Validation error", errors: error.errors });
-      } else {
-        console.error("Error updating DNS record:", error);
-        res.status(500).json({ message: "Internal server error" });
-      }
-    }
-  });
-
-  app.delete("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      
-      // Get the record before deletion
-      const record = await storage.getDnsRecord(id);
-      
-      if (!record) {
-        return res.status(404).json({ message: "DNS record not found" });
-      }
-      
-      const deleted = await storage.deleteDnsRecord(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "DNS record not found" });
-      }
-      
-      // Add to history
-      await storage.addDnsHistory(
-        id,
-        "delete",
-        JSON.stringify(record),
-        undefined,
-        req.user?.id
-      );
-      
-      // Trigger webhooks
-      await triggerDnsWebhooks(
-        "delete",
-        record.domainId,
-        record,
-        null,
-        req.user?.id || null
-      );
-      
-      res.status(204).end();
-    } catch (error) {
-      console.error("Error deleting DNS record:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // DNS Records API routes are already defined above
 
   // Providers
   app.get("/api/providers", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
