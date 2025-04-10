@@ -9,10 +9,57 @@ import {
   insertProviderSchema,
   insertApiTokenSchema,
   insertOrganizationSchema,
+  insertWebhookSchema,
   recordTypes,
   providerTypes
 } from "@shared/schema";
 import { randomBytes } from "crypto";
+
+// Helper function to trigger webhooks for DNS operations
+async function triggerDnsWebhooks(
+  action: string, 
+  domainId: string,
+  recordData: any, 
+  previousData: any = null, 
+  userId: string | null = null
+) {
+  try {
+    // First, get the domain to find the organization
+    const domain = await storage.getDomain(domainId);
+    if (!domain) return;
+    
+    // Get webhooks for this organization
+    const webhooks = await storage.getWebhooksByOrganization(domain.organizationId);
+    
+    // Filter webhooks that have subscribed to DNS events
+    const dnsWebhooks = webhooks.filter(webhook => 
+      webhook.isActive && 
+      (webhook.events.includes('dns.*') || webhook.events.includes(`dns.${action}`))
+    );
+    
+    if (dnsWebhooks.length === 0) return;
+    
+    // Create webhook payload
+    const payload = {
+      event: `dns.${action}`,
+      timestamp: new Date().toISOString(),
+      data: {
+        domain: domain.name,
+        record: recordData,
+        previousRecord: previousData,
+        userId
+      }
+    };
+    
+    // Trigger each webhook
+    for (const webhook of dnsWebhooks) {
+      await storage.triggerWebhook(webhook.id, payload);
+    }
+  } catch (error) {
+    console.error("Error triggering webhooks:", error);
+    // Don't throw - we don't want to interrupt the main operation if webhooks fail
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -250,6 +297,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.user?.id
       );
       
+      // Trigger webhooks
+      await triggerDnsWebhooks(
+        "create",
+        record.domainId,
+        record,
+        previousRecord,
+        req.user?.id || null
+      );
+      
       res.status(201).json(record);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -298,6 +354,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.user?.id
       );
       
+      // Trigger webhooks
+      await triggerDnsWebhooks(
+        "update",
+        updatedRecord.domainId,
+        updatedRecord,
+        previousRecord,
+        req.user?.id || null
+      );
+      
       res.json(updatedRecord);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -333,6 +398,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JSON.stringify(record),
         undefined,
         req.user?.id
+      );
+      
+      // Trigger webhooks
+      await triggerDnsWebhooks(
+        "delete",
+        record.domainId,
+        record,
+        null,
+        req.user?.id || null
       );
       
       res.status(204).end();
@@ -664,6 +738,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(sanitizedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Webhooks
+  app.get("/api/webhooks", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      let webhooks;
+      const orgId = req.query.organizationId as string;
+      
+      if (orgId) {
+        webhooks = await storage.getWebhooksByOrganization(orgId);
+      } else if (req.user?.role === "admin") {
+        // Admins can see all webhooks
+        const allOrgs = await storage.getOrganizations();
+        webhooks = await Promise.all(
+          allOrgs.map(org => storage.getWebhooksByOrganization(org.id))
+        ).then(results => results.flat());
+      } else {
+        // Others can only see webhooks for their organization
+        webhooks = req.user?.organizationId 
+          ? await storage.getWebhooksByOrganization(req.user.organizationId)
+          : [];
+      }
+      
+      res.json(webhooks);
+    } catch (error) {
+      console.error("Error fetching webhooks:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/webhooks/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const webhook = await storage.getWebhook(req.params.id);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      // Check authorization
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to access this webhook" });
+      }
+      
+      res.json(webhook);
+    } catch (error) {
+      console.error("Error fetching webhook:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/webhooks", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const validatedData = insertWebhookSchema.parse(req.body);
+      
+      // Add the user who created it
+      validatedData.createdBy = req.user!.id;
+      
+      // Check authorization for non-admin users
+      if (req.user?.role !== "admin" && validatedData.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to create webhooks for this organization" });
+      }
+      
+      const webhook = await storage.createWebhook(validatedData);
+      res.status(201).json(webhook);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error creating webhook:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.put("/api/webhooks/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const webhook = await storage.getWebhook(req.params.id);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      // Check authorization
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to modify this webhook" });
+      }
+      
+      const validatedData = insertWebhookSchema.partial().parse(req.body);
+      
+      // Prevent changing organization for security reasons
+      if (validatedData.organizationId && validatedData.organizationId !== webhook.organizationId) {
+        return res.status(400).json({ message: "Cannot change webhook organization" });
+      }
+      
+      const updatedWebhook = await storage.updateWebhook(req.params.id, validatedData);
+      res.json(updatedWebhook);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error updating webhook:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.delete("/api/webhooks/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const webhook = await storage.getWebhook(req.params.id);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      // Check authorization
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to delete this webhook" });
+      }
+      
+      const deleted = await storage.deleteWebhook(req.params.id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting webhook:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Test webhook endpoint
+  app.post("/api/webhooks/:id/test", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const webhook = await storage.getWebhook(req.params.id);
+      
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook not found" });
+      }
+      
+      // Check authorization
+      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Not authorized to test this webhook" });
+      }
+      
+      const testPayload = {
+        event: "test",
+        timestamp: new Date().toISOString(),
+        data: {
+          message: "This is a test notification from the DNS Manager",
+          initiatedBy: {
+            userId: req.user!.id,
+            username: req.user!.username
+          }
+        }
+      };
+      
+      const success = await storage.triggerWebhook(req.params.id, testPayload);
+      
+      if (success) {
+        res.status(200).json({ message: "Test webhook triggered successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to trigger webhook" });
+      }
+    } catch (error) {
+      console.error("Error testing webhook:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
