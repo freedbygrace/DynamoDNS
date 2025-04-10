@@ -111,7 +111,7 @@ export class DatabaseStorage implements IStorage {
     return newDomain;
   }
 
-  async updateDomain(id: number, domainData: Partial<InsertDomain>): Promise<Domain | undefined> {
+  async updateDomain(id: string, domainData: Partial<InsertDomain>): Promise<Domain | undefined> {
     const [updatedDomain] = await db.update(domains)
       .set({ ...domainData, lastUpdated: new Date() })
       .where(eq(domains.id, id))
@@ -119,18 +119,18 @@ export class DatabaseStorage implements IStorage {
     return updatedDomain;
   }
 
-  async deleteDomain(id: number): Promise<boolean> {
+  async deleteDomain(id: string): Promise<boolean> {
     const result = await db.delete(domains).where(eq(domains.id, id)).returning();
     return result.length > 0;
   }
 
   // DNS Record management
-  async getDnsRecord(id: number): Promise<DnsRecord | undefined> {
+  async getDnsRecord(id: string): Promise<DnsRecord | undefined> {
     const [record] = await db.select().from(dnsRecords).where(eq(dnsRecords.id, id));
     return record;
   }
 
-  async getDnsRecordsByDomain(domainId: number): Promise<DnsRecord[]> {
+  async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
     return await db.select()
       .from(dnsRecords)
       .where(eq(dnsRecords.domainId, domainId));
@@ -141,7 +141,7 @@ export class DatabaseStorage implements IStorage {
     return newRecord;
   }
 
-  async updateDnsRecord(id: number, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
+  async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
     const [updatedRecord] = await db.update(dnsRecords)
       .set({ ...recordData, lastUpdated: new Date() })
       .where(eq(dnsRecords.id, id))
@@ -149,13 +149,13 @@ export class DatabaseStorage implements IStorage {
     return updatedRecord;
   }
 
-  async deleteDnsRecord(id: number): Promise<boolean> {
+  async deleteDnsRecord(id: string): Promise<boolean> {
     const result = await db.delete(dnsRecords).where(eq(dnsRecords.id, id)).returning();
     return result.length > 0;
   }
 
   // Provider management
-  async getProvider(id: number): Promise<Provider | undefined> {
+  async getProvider(id: string): Promise<Provider | undefined> {
     const [provider] = await db.select().from(providers).where(eq(providers.id, id));
     return provider;
   }
@@ -169,7 +169,7 @@ export class DatabaseStorage implements IStorage {
     return newProvider;
   }
 
-  async updateProvider(id: number, providerData: Partial<InsertProvider>): Promise<Provider | undefined> {
+  async updateProvider(id: string, providerData: Partial<InsertProvider>): Promise<Provider | undefined> {
     const [updatedProvider] = await db.update(providers)
       .set(providerData)
       .where(eq(providers.id, id))
@@ -177,13 +177,13 @@ export class DatabaseStorage implements IStorage {
     return updatedProvider;
   }
 
-  async deleteProvider(id: number): Promise<boolean> {
+  async deleteProvider(id: string): Promise<boolean> {
     const result = await db.delete(providers).where(eq(providers.id, id)).returning();
     return result.length > 0;
   }
 
   // API Token management
-  async getApiToken(id: number): Promise<ApiToken | undefined> {
+  async getApiToken(id: string): Promise<ApiToken | undefined> {
     const [token] = await db.select().from(apiTokens).where(eq(apiTokens.id, id));
     return token;
   }
@@ -193,7 +193,7 @@ export class DatabaseStorage implements IStorage {
     return apiToken;
   }
 
-  async getApiTokensByOrganization(organizationId: number): Promise<ApiToken[]> {
+  async getApiTokensByOrganization(organizationId: string): Promise<ApiToken[]> {
     return await db.select()
       .from(apiTokens)
       .where(eq(apiTokens.organizationId, organizationId));
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
     return newToken;
   }
 
-  async updateApiToken(id: number, tokenData: Partial<InsertApiToken>): Promise<ApiToken | undefined> {
+  async updateApiToken(id: string, tokenData: Partial<InsertApiToken>): Promise<ApiToken | undefined> {
     const [updatedToken] = await db.update(apiTokens)
       .set(tokenData)
       .where(eq(apiTokens.id, id))
@@ -212,21 +212,21 @@ export class DatabaseStorage implements IStorage {
     return updatedToken;
   }
 
-  async deleteApiToken(id: number): Promise<boolean> {
+  async deleteApiToken(id: string): Promise<boolean> {
     const result = await db.delete(apiTokens).where(eq(apiTokens.id, id)).returning();
     return result.length > 0;
   }
 
   // DNS History
   async addDnsHistory(
-    recordId: number,
+    recordId: string,
     action: string,
     previousValue?: string,
     newValue?: string,
-    userId?: number
+    userId?: string
   ): Promise<DnsHistory> {
     const [historyEntry] = await db.insert(dnsHistory).values({
-      recordId,
+      record_id: recordId,
       action,
       previousValue,
       newValue,
@@ -236,14 +236,14 @@ export class DatabaseStorage implements IStorage {
     return historyEntry;
   }
 
-  async getDnsHistoryByRecord(recordId: number): Promise<DnsHistory[]> {
+  async getDnsHistoryByRecord(recordId: string): Promise<DnsHistory[]> {
     return await db.select()
       .from(dnsHistory)
       .where(eq(dnsHistory.recordId, recordId))
       .orderBy(desc(dnsHistory.timestamp));
   }
 
-  async getDnsHistoryByDomain(domainId: number): Promise<DnsHistory[]> {
+  async getDnsHistoryByDomain(domainId: string): Promise<DnsHistory[]> {
     // We need to get all records for the domain first
     const records = await this.getDnsRecordsByDomain(domainId);
     const recordIds = records.map(r => r.id);
