@@ -203,21 +203,24 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use raw SQL to avoid schema issues
       const now = new Date().toISOString();
+      
+      // Build SQL dynamically based on whether providerId is provided
+      let columnsSQL;
+      let valuesSQL;
+      
+      if (domain.providerId) {
+        columnsSQL = sql`id, name, organization_id, is_active, provider_id, created_at`;
+        valuesSQL = sql`gen_random_uuid(), ${domain.name}, ${domain.organizationId}, ${domain.isActive}, ${domain.providerId}, ${now}`;
+      } else {
+        columnsSQL = sql`id, name, organization_id, is_active, created_at`;
+        valuesSQL = sql`gen_random_uuid(), ${domain.name}, ${domain.organizationId}, ${domain.isActive}, ${now}`;
+      }
+      
       const query = sql`
         INSERT INTO domains (
-          id, 
-          name, 
-          organization_id, 
-          is_active, 
-          provider_id, 
-          created_at
+          ${columnsSQL}
         ) VALUES (
-          gen_random_uuid(), 
-          ${domain.name}, 
-          ${domain.organizationId}, 
-          ${domain.isActive}, 
-          ${domain.providerId || null},
-          ${now}
+          ${valuesSQL}
         )
         RETURNING 
           id, 

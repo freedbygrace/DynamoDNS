@@ -215,7 +215,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use id as string without parsing to int
       const id = req.params.id;
-      const validatedData = insertDomainSchema.partial().parse(req.body);
+      
+      // Create custom validation schema with optional providerId
+      const domainUpdateSchema = z.object({
+        name: z.string().optional(),
+        organizationId: z.string().uuid().optional(),
+        providerId: z.string().uuid().optional().nullable(),
+        isActive: z.boolean().optional()
+      });
+      
+      const validatedData = domainUpdateSchema.parse(req.body);
       
       const updatedDomain = await storage.updateDomain(id, validatedData);
       
