@@ -216,6 +216,8 @@ export const insertGroupRoleSchema = createInsertSchema(groupRoles).pick({
   assignedBy: true,
 });
 
+
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -318,6 +320,8 @@ export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+
 
 // Custom roles relations
 export const customRolesRelations = relations(customRoles, ({ one, many }) => ({
