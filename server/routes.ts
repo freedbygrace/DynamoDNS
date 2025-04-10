@@ -173,7 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/domains/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      // Use the id as a string directly without parsing as integer
+      const id = req.params.id;
       const domain = await storage.getDomain(id);
       
       if (!domain) {
