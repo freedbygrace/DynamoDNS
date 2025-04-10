@@ -68,7 +68,7 @@ export default function DomainsPage() {
   });
   
   // Fetch providers for the form
-  const { data: providers = [] } = useQuery({
+  const { data: providers = [] } = useQuery<Provider[]>({
     queryKey: ["/api/providers"],
   });
 
@@ -172,6 +172,7 @@ export default function DomainsPage() {
       <DomainTable 
         onManageDomain={handleManageDomain}
         onDeleteDomain={handleDeleteDomain}
+        onAddDomain={() => setIsAddDomainDialogOpen(true)}
       />
 
       {/* Add Domain Dialog */}
@@ -216,10 +217,10 @@ export default function DomainsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {providers.map((provider) => (
+                        {providers.map((provider: Provider) => (
                           <SelectItem 
                             key={provider.id} 
-                            value={provider.id.toString()}
+                            value={provider.id}
                           >
                             {provider.name}
                           </SelectItem>

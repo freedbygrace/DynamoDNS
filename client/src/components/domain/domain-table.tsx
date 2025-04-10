@@ -25,9 +25,10 @@ import { Cloud, Home, MoreVertical, Loader2, CircleHelp } from "lucide-react";
 interface DomainTableProps {
   onManageDomain?: (domain: Domain) => void;
   onDeleteDomain?: (domain: Domain) => void;
+  onAddDomain?: () => void;
 }
 
-export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps) {
+export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: DomainTableProps) {
   const { currentOrganization } = useOrganization();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
@@ -42,12 +43,15 @@ export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps
     queryKey: ["/api/providers"],
   });
 
-  const getProviderName = (providerId: string) => {
+  const getProviderName = (providerId: string | null | undefined) => {
+    if (!providerId) return "None";
     const provider = providers.find(p => p.id === providerId);
     return provider?.name || "Unknown";
   };
 
-  const getProviderIcon = (providerId: string) => {
+  const getProviderIcon = (providerId: string | null | undefined) => {
+    if (!providerId) return <CircleHelp className="mr-2 text-primary" size={16} />;
+    
     const provider = providers.find(p => p.id === providerId);
     
     if (!provider) return <CircleHelp className="mr-2 text-primary" size={16} />;
@@ -121,7 +125,7 @@ export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps
           Get started by adding your first domain.
         </p>
         <div className="mt-6">
-          <Button>Add Domain</Button>
+          <Button onClick={onAddDomain}>Add Domain</Button>
         </div>
       </div>
     );
@@ -131,7 +135,7 @@ export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps
     <div className="bg-card rounded-lg shadow-sm border border-border">
       <div className="p-5 border-b border-border flex justify-between items-center">
         <h2 className="text-lg font-semibold">Managed Domains</h2>
-        <Button>
+        <Button onClick={onAddDomain}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
