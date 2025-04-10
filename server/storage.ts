@@ -29,6 +29,16 @@ export interface IStorage {
   updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
   deleteOrganization(id: string): Promise<boolean>;
   
+  // Group management
+  getGroup(id: string): Promise<Group | undefined>;
+  getGroups(): Promise<Group[]>;
+  getGroupMembers(groupId: string): Promise<GroupMember[]>;
+  createGroup(group: InsertGroup): Promise<Group>;
+  updateGroup(id: string, group: Partial<InsertGroup>): Promise<Group | undefined>;
+  deleteGroup(id: string): Promise<boolean>;
+  addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
+  removeGroupMember(id: string): Promise<boolean>;
+  
   // Domain management
   getDomain(id: string): Promise<Domain | undefined>;
   getDomainsByOrganization(organizationId: string): Promise<Domain[]>;
