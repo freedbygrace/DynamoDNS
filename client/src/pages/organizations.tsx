@@ -11,9 +11,19 @@ import { Organization } from '@shared/schema';
 import { useOrganization } from '@/context/organization-context';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Users, Plus, Edit, Trash2, Building } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Building, Calendar, Clock, Info, AlertCircle } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 
 export default function OrganizationsPage() {
   const { user } = useAuth();
@@ -22,6 +32,12 @@ export default function OrganizationsPage() {
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgActive, setNewOrgActive] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [editOrgName, setEditOrgName] = useState('');
+  const [editOrgActive, setEditOrgActive] = useState(true);
   
   const isAdmin = user?.role === 'admin';
   
