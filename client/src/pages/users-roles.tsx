@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { User, InsertUser, systemRoles, UserRole } from "@shared/schema";
+import { User, InsertUser, systemRoles, UserRole, Organization } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -99,7 +99,7 @@ export default function UsersRolesPage() {
   });
 
   // Fetch organizations for select
-  const { data: organizations = [] } = useQuery({
+  const { data: organizations = [] } = useQuery<Organization[]>({
     queryKey: ["/api/organizations"],
   });
 
@@ -570,8 +570,8 @@ export default function UsersRolesPage() {
                   <FormItem>
                     <FormLabel>Organization</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(value)}
+                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
