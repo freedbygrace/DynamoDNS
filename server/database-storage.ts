@@ -386,26 +386,89 @@ export class DatabaseStorage implements IStorage {
 
   // DNS Record management
   async getDnsRecord(id: string): Promise<DnsRecord | undefined> {
-    const [record] = await db.select().from(dnsRecords).where(eq(dnsRecords.id, id));
+    const [record] = await db.select({
+      id: dnsRecords.id,
+      domainId: dnsRecords.domainId,
+      name: dnsRecords.name,
+      type: dnsRecords.type,
+      content: dnsRecords.content,
+      ttl: dnsRecords.ttl,
+      isActive: dnsRecords.isActive,
+      isAutoIP: dnsRecords.isAutoIP,
+      notes: dnsRecords.notes,
+      providerId: dnsRecords.providerId,
+      lastUpdated: dnsRecords.lastUpdated,
+      createdAt: dnsRecords.createdAt
+    })
+    .from(dnsRecords)
+    .where(eq(dnsRecords.id, id));
     return record;
   }
 
   async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
-    return await db.select()
+    return await db.select({
+      id: dnsRecords.id,
+      domainId: dnsRecords.domainId,
+      name: dnsRecords.name,
+      type: dnsRecords.type,
+      content: dnsRecords.content,
+      ttl: dnsRecords.ttl,
+      isActive: dnsRecords.isActive,
+      isAutoIP: dnsRecords.isAutoIP,
+      notes: dnsRecords.notes,
+      providerId: dnsRecords.providerId,
+      lastUpdated: dnsRecords.lastUpdated,
+      createdAt: dnsRecords.createdAt
+    })
       .from(dnsRecords)
       .where(eq(dnsRecords.domainId, domainId));
   }
 
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
-    const [newRecord] = await db.insert(dnsRecords).values(record).returning();
+    // Filter out the proxied field if it exists
+    const { proxied, ...recordData } = record as any;
+    
+    // Insert the record without the proxied field
+    const [newRecord] = await db.insert(dnsRecords).values(recordData).returning({
+      id: dnsRecords.id,
+      domainId: dnsRecords.domainId,
+      name: dnsRecords.name,
+      type: dnsRecords.type,
+      content: dnsRecords.content,
+      ttl: dnsRecords.ttl,
+      isActive: dnsRecords.isActive,
+      isAutoIP: dnsRecords.isAutoIP,
+      notes: dnsRecords.notes,
+      providerId: dnsRecords.providerId,
+      lastUpdated: dnsRecords.lastUpdated,
+      createdAt: dnsRecords.createdAt
+    });
+    
     return newRecord;
   }
 
   async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
+    // Filter out the proxied field if it exists
+    const { proxied, ...filteredData } = recordData as any;
+    
     const [updatedRecord] = await db.update(dnsRecords)
-      .set({ ...recordData, lastUpdated: new Date() })
+      .set({ ...filteredData, lastUpdated: new Date() })
       .where(eq(dnsRecords.id, id))
-      .returning();
+      .returning({
+        id: dnsRecords.id,
+        domainId: dnsRecords.domainId,
+        name: dnsRecords.name,
+        type: dnsRecords.type,
+        content: dnsRecords.content,
+        ttl: dnsRecords.ttl,
+        isActive: dnsRecords.isActive,
+        isAutoIP: dnsRecords.isAutoIP,
+        notes: dnsRecords.notes,
+        providerId: dnsRecords.providerId,
+        lastUpdated: dnsRecords.lastUpdated,
+        createdAt: dnsRecords.createdAt
+      });
+    
     return updatedRecord;
   }
 
