@@ -438,16 +438,36 @@ export class DatabaseStorage implements IStorage {
     startDate?: Date, 
     endDate?: Date
   ): Promise<DnsMetric[]> {
-    let query = db.select().from(dnsMetrics).where(eq(dnsMetrics.metricType, metricType));
-    
-    if (startDate) {
-      query = query.where(sql`${dnsMetrics.timestamp} >= ${startDate}`);
+    try {
+      // Build the conditions array
+      const conditions = [eq(dnsMetrics.metricType, metricType)];
+      
+      if (startDate) {
+        conditions.push(sql`${dnsMetrics.timestamp} >= ${startDate}`);
+      }
+      
+      if (endDate) {
+        conditions.push(sql`${dnsMetrics.timestamp} <= ${endDate}`);
+      }
+      
+      // Use a single where with and() to combine all conditions
+      const results = await db.select({
+        id: dnsMetrics.id,
+        domainId: dnsMetrics.domainId,
+        recordId: dnsMetrics.recordId,
+        metricType: dnsMetrics.metricType,
+        value: dnsMetrics.value,
+        tags: dnsMetrics.tags,
+        timestamp: dnsMetrics.timestamp
+      })
+      .from(dnsMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(dnsMetrics.timestamp));
+      
+      return results;
+    } catch (error) {
+      console.error("Error in getDnsMetricsByType:", error);
+      return []; // Return empty array instead of propagating the error
     }
-    
-    if (endDate) {
-      query = query.where(sql`${dnsMetrics.timestamp} <= ${endDate}`);
-    }
-    
-    return await query.orderBy(desc(dnsMetrics.timestamp));
   }
 }
