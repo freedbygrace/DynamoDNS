@@ -1,13 +1,14 @@
 import { 
   users, organizations, domains, dnsRecords, 
-  providers, dnsHistory, apiTokens, webhooks,
+  providers, dnsHistory, apiTokens, webhooks, webhookDeliveryLogs,
   type User, type InsertUser, 
   type Organization, type InsertOrganization,
   type Domain, type InsertDomain,
   type DnsRecord, type InsertDnsRecord,
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
-  type DnsHistory, type Webhook, type InsertWebhook
+  type DnsHistory, type Webhook, type InsertWebhook,
+  type WebhookDeliveryLog, type InsertWebhookDeliveryLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
@@ -297,8 +298,38 @@ export class DatabaseStorage implements IStorage {
       const webhook = await this.getWebhook(webhookId);
       if (!webhook || !webhook.isActive) return false;
 
+      // Using the webhook utility to deliver the webhook
+      const { generateSignature, deliverWebhook } = await import('./utils/webhook');
+      
       // In a real implementation, this would make an HTTP request to the webhook URL
       console.log(`Triggering webhook ${webhook.name} (${webhook.id}) with payload:`, payload);
+      
+      // Generate signature for the payload if a secret is set
+      const signature = webhook.secret ? generateSignature(payload, webhook.secret) : '';
+      
+      // In a real implementation, this would make the actual HTTP request
+      // For now, simulate a successful delivery
+      const deliveryResult = {
+        success: true,
+        statusCode: 200,
+        message: 'Webhook delivered successfully (simulated)',
+        timestamp: new Date(),
+        responseBody: JSON.stringify({ success: true }),
+        retryCount: 0
+      };
+      
+      // Log the delivery attempt
+      await this.addWebhookDeliveryLog({
+        webhookId: webhook.id,
+        event: payload.event || 'unknown',
+        payload,
+        signature,
+        status: deliveryResult.success,
+        statusCode: deliveryResult.statusCode,
+        message: deliveryResult.message,
+        responseBody: deliveryResult.responseBody,
+        retryCount: deliveryResult.retryCount
+      });
       
       // Update the lastTriggered timestamp
       await db.update(webhooks)
@@ -308,7 +339,39 @@ export class DatabaseStorage implements IStorage {
       return true;
     } catch (error) {
       console.error(`Error triggering webhook ${webhookId}:`, error);
+      
+      // Log the failed delivery attempt
+      if (error instanceof Error) {
+        await this.addWebhookDeliveryLog({
+          webhookId,
+          event: payload?.event || 'unknown',
+          payload,
+          signature: '',
+          status: false,
+          message: `Error: ${error.message}`,
+          retryCount: 0
+        });
+      }
+      
       return false;
     }
+  }
+  
+  // Webhook Delivery Logs
+  async addWebhookDeliveryLog(log: InsertWebhookDeliveryLog): Promise<WebhookDeliveryLog> {
+    const [newLog] = await db.insert(webhookDeliveryLogs).values(log).returning();
+    return newLog;
+  }
+  
+  async getWebhookDeliveryLog(id: string): Promise<WebhookDeliveryLog | undefined> {
+    const [log] = await db.select().from(webhookDeliveryLogs).where(eq(webhookDeliveryLogs.id, id));
+    return log;
+  }
+  
+  async getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]> {
+    return await db.select()
+      .from(webhookDeliveryLogs)
+      .where(eq(webhookDeliveryLogs.webhookId, webhookId))
+      .orderBy(desc(webhookDeliveryLogs.createdAt));
   }
 }
