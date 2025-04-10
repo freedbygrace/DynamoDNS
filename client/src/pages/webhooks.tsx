@@ -233,6 +233,33 @@ export default function WebhooksPage() {
     },
   });
   
+  // Retry webhook delivery mutation
+  const retryWebhookDeliveryMutation = useMutation({
+    mutationFn: async (logId: string) => {
+      const res = await apiRequest("POST", `/api/webhook-logs/${logId}/retry`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Webhook delivery retried",
+        description: "The webhook delivery has been retried successfully.",
+      });
+      // Refresh the logs to show the new retry attempt
+      queryClient.invalidateQueries({
+        queryKey: ["/api/webhooks", currentWebhookId, "logs"],
+      });
+      // Reset the selected log
+      setSelectedLog(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error retrying webhook",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Fetch webhook delivery logs
   const {
     data: webhookLogs = [],
@@ -271,6 +298,10 @@ export default function WebhooksPage() {
 
   const handleTestWebhook = (id: string) => {
     testWebhookMutation.mutate(id);
+  };
+  
+  const handleRetryWebhook = (logId: string) => {
+    retryWebhookDeliveryMutation.mutate(logId);
   };
 
   const handleEditClick = (webhook: Webhook) => {
@@ -855,13 +886,28 @@ export default function WebhooksPage() {
                 <div className="space-y-4 border p-4 rounded-md">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Delivery Details</h3>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedLog(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex space-x-2">
+                      {!selectedLog.status && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRetryWebhook(selectedLog.id)}
+                          disabled={retryWebhookDeliveryMutation.isPending}
+                        >
+                          {retryWebhookDeliveryMutation.isPending && (
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          )}
+                          <RefreshCw className="mr-1 h-3 w-3" /> Retry
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedLog(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid gap-4">
