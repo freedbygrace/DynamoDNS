@@ -1,35 +1,23 @@
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface BackButtonProps {
-  to?: string;
-  fallbackPath?: string;
-  className?: string;
+  href: string;
+  label?: string;
 }
 
-export function BackButton({ to, fallbackPath = "/", className = "" }: BackButtonProps) {
-  const [_, setLocation] = useLocation();
-  
-  const handleBack = () => {
-    if (to) {
-      setLocation(to);
-    } else if (window.history.length > 2) {
-      window.history.back();
-    } else {
-      setLocation(fallbackPath);
-    }
-  };
-  
+export function BackButton({ href, label = 'Back' }: BackButtonProps) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleBack}
-      className={`flex items-center gap-1 px-2 ${className}`}
-    >
-      <ChevronLeft className="h-4 w-4" />
-      <span>Back</span>
-    </Button>
+    <Link href={href}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mb-4 gap-1 pl-0 hover:pl-1 transition-all"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {label}
+      </Button>
+    </Link>
   );
 }
