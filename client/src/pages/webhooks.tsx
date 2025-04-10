@@ -76,8 +76,11 @@ export default function WebhooksPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isTestResultOpen, setIsTestResultOpen] = useState(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
+  const [isLogsDialogOpen, setIsLogsDialogOpen] = useState(false);
   const [currentWebhook, setCurrentWebhook] = useState<Webhook | null>(null);
+  const [currentWebhookId, setCurrentWebhookId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<WebhookDeliveryLog | null>(null);
 
   // Form state for create/edit
   const [formData, setFormData] = useState({
@@ -229,6 +232,21 @@ export default function WebhooksPage() {
       });
     },
   });
+  
+  // Fetch webhook delivery logs
+  const {
+    data: webhookLogs = [],
+    isLoading: isLogsLoading,
+    error: logsError,
+  } = useQuery({
+    queryKey: ["/api/webhooks", currentWebhookId, "logs"],
+    queryFn: async () => {
+      if (!currentWebhookId) return [];
+      const res = await apiRequest("GET", `/api/webhooks/${currentWebhookId}/logs`);
+      return await res.json();
+    },
+    enabled: !!currentWebhookId && isLogsDialogOpen,
+  });
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,6 +289,15 @@ export default function WebhooksPage() {
     setCurrentWebhook(webhook);
     setIsDeleteOpen(true);
   };
+  
+  const handleViewLogs = (webhookId: string) => {
+    setCurrentWebhookId(webhookId);
+    const webhook = webhooks.find((w: Webhook) => w.id === webhookId);
+    if (webhook) {
+      setCurrentWebhook(webhook);
+    }
+    setIsLogsDialogOpen(true);
+  };
 
   // Event options for the select component
   const eventOptions = [
@@ -281,8 +308,11 @@ export default function WebhooksPage() {
   ];
 
   // Helper to format the date
-  const formatDate = (dateString: string | null | undefined) => {
+  const formatDate = (dateString: string | Date | null | undefined) => {
     if (!dateString) return "Never";
+    if (dateString instanceof Date) {
+      return dateString.toLocaleString();
+    }
     return new Date(dateString).toLocaleString();
   };
 
@@ -387,6 +417,14 @@ export default function WebhooksPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewLogs(webhook.id)}
+                          >
+                            <Activity className="h-4 w-4" />
+                            <span className="sr-only">Logs</span>
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -722,6 +760,178 @@ export default function WebhooksPage() {
           </div>
           <DialogFooter>
             <Button onClick={() => setIsTestResultOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Webhook Delivery Logs Dialog */}
+      <Dialog 
+        open={isLogsDialogOpen} 
+        onOpenChange={(open) => {
+          setIsLogsDialogOpen(open);
+          if (!open) {
+            setCurrentWebhookId(null);
+            setSelectedLog(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Delivery Logs - {currentWebhook?.name}</DialogTitle>
+            <DialogDescription>
+              View webhook delivery history and status
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLogsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : logsError ? (
+            <div className="py-4 text-center">
+              <p className="text-destructive">Error loading logs</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {(logsError as Error).message}
+              </p>
+            </div>
+          ) : webhookLogs.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+              <h3 className="mt-4 text-lg font-medium">No delivery logs found</h3>
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
+                This webhook hasn't been triggered yet or logs have been cleared.
+              </p>
+              <Button
+                onClick={() => handleTestWebhook(currentWebhookId!)}
+                className="mt-4"
+                variant="outline"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" /> Test Webhook Now
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {webhookLogs.map((log: WebhookDeliveryLog) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-medium">{log.event}</TableCell>
+                        <TableCell>
+                          {log.status ? (
+                            <Badge className="bg-green-500 text-white">Success</Badge>
+                          ) : (
+                            <Badge variant="destructive">Failed</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(log.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedLog(log)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View Details</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {selectedLog && (
+                <div className="space-y-4 border p-4 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Delivery Details</h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedLog(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Status</h4>
+                      <div className="flex items-center gap-2">
+                        {selectedLog.status ? (
+                          <Badge className="bg-green-500 text-white">
+                            Success ({selectedLog.statusCode || 200})
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            Failed {selectedLog.statusCode && `(${selectedLog.statusCode})`}
+                          </Badge>
+                        )}
+                        {selectedLog.retryCount > 0 && (
+                          <Badge variant="outline">
+                            Retry {selectedLog.retryCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {selectedLog.message && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Message</h4>
+                        <div className="bg-muted p-3 rounded-md text-sm">
+                          {selectedLog.message}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Payload</h4>
+                      <div className="bg-muted p-3 rounded-md overflow-x-auto">
+                        <pre className="text-xs whitespace-pre-wrap">
+                          {JSON.stringify(selectedLog.payload, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                    
+                    {selectedLog.responseBody && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Response</h4>
+                        <div className="bg-muted p-3 rounded-md overflow-x-auto">
+                          <pre className="text-xs whitespace-pre-wrap">
+                            {selectedLog.responseBody}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedLog.signature && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Signature</h4>
+                        <div className="bg-muted p-3 rounded-md text-xs font-mono truncate">
+                          {selectedLog.signature}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLogsDialogOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
