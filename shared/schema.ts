@@ -103,6 +103,21 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Webhook delivery logs for tracking delivery status and history
+export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  webhookId: uuid("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  payload: jsonb("payload").notNull(),
+  signature: text("signature"),
+  status: boolean("status").notNull(),
+  statusCode: integer("status_code"),
+  message: text("message").notNull(),
+  responseBody: text("response_body"),
+  retryCount: integer("retry_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Custom roles table for user-defined roles beyond system defaults
 export const customRoles = pgTable("custom_roles", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -240,6 +255,18 @@ export const insertWebhookSchema = createInsertSchema(webhooks).pick({
   createdBy: true,
 });
 
+export const insertWebhookDeliveryLogSchema = createInsertSchema(webhookDeliveryLogs).pick({
+  webhookId: true,
+  event: true,
+  payload: true,
+  signature: true,
+  status: true,
+  statusCode: true,
+  message: true,
+  responseBody: true,
+  retryCount: true,
+});
+
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -272,6 +299,8 @@ export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
 export type InsertGroupRole = z.infer<typeof insertGroupRoleSchema>;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhookDeliveryLog = z.infer<typeof insertWebhookDeliveryLogSchema>;
+export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;
 
 // Role Types
 // System default roles - these will still be available alongside custom roles
@@ -347,7 +376,7 @@ export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
   }),
 }));
 
-export const webhooksRelations = relations(webhooks, ({ one }) => ({
+export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [webhooks.organizationId],
     references: [organizations.id],
@@ -355,6 +384,14 @@ export const webhooksRelations = relations(webhooks, ({ one }) => ({
   creator: one(users, {
     fields: [webhooks.createdBy],
     references: [users.id],
+  }),
+  deliveryLogs: many(webhookDeliveryLogs),
+}));
+
+export const webhookDeliveryLogsRelations = relations(webhookDeliveryLogs, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveryLogs.webhookId],
+    references: [webhooks.id],
   }),
 }));
 

@@ -70,6 +70,11 @@ export interface IStorage {
   deleteWebhook(id: string): Promise<boolean>;
   triggerWebhook(webhookId: string, payload: any): Promise<boolean>;
   
+  // Webhook Delivery Logs
+  addWebhookDeliveryLog(log: InsertWebhookDeliveryLog): Promise<WebhookDeliveryLog>;
+  getWebhookDeliveryLog(id: string): Promise<WebhookDeliveryLog | undefined>;
+  getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]>;
+  
   // Session store
   sessionStore: any;
 }
