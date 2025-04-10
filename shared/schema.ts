@@ -62,6 +62,7 @@ export const dnsRecords = pgTable("dns_records", {
   isActive: boolean("is_active").default(true).notNull(),
   isAutoIP: boolean("is_auto_ip").default(false).notNull(),
   notes: text("notes"),
+  providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -374,6 +375,10 @@ export const dnsRecordsRelations = relations(dnsRecords, ({ one, many }) => ({
   domain: one(domains, {
     fields: [dnsRecords.domainId],
     references: [domains.id],
+  }),
+  provider: one(providers, {
+    fields: [dnsRecords.providerId],
+    references: [providers.id],
   }),
   history: many(dnsHistory),
 }));
