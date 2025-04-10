@@ -30,6 +30,7 @@ const registerSchema = z.object({
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const { theme } = useTheme();
+  const { organizations, isLoading: orgsLoading } = useOrganization();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -197,6 +198,34 @@ export default function AuthPage() {
                           <FormLabel>Password</FormLabel>
                           <FormControl>
                             <Input type="password" placeholder="Create a password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="organizationId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Organization</FormLabel>
+                          <FormControl>
+                            <Select
+                              disabled={orgsLoading}
+                              onValueChange={(value) => field.onChange(parseInt(value))}
+                              value={field.value?.toString() || ""}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an organization (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {organizations.map((org) => (
+                                  <SelectItem key={org.id} value={org.id.toString()}>
+                                    {org.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

@@ -147,7 +147,16 @@ export class MemStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const createdAt = new Date();
-    const newUser: User = { id, ...user, createdAt };
+    const newUser: User = { 
+      id, 
+      username: user.username,
+      password: user.password,
+      email: user.email,
+      fullName: user.fullName || null,
+      role: user.role || 'user',
+      organizationId: user.organizationId || null,
+      createdAt
+    };
     this.usersMap.set(id, newUser);
     return newUser;
   }
@@ -177,7 +186,12 @@ export class MemStorage implements IStorage {
   async createOrganization(org: InsertOrganization): Promise<Organization> {
     const id = this.orgIdCounter++;
     const createdAt = new Date();
-    const newOrg: Organization = { id, ...org, createdAt };
+    const newOrg: Organization = {
+      id,
+      name: org.name,
+      isActive: org.isActive ?? true,
+      createdAt
+    };
     this.orgsMap.set(id, newOrg);
     return newOrg;
   }
@@ -213,7 +227,15 @@ export class MemStorage implements IStorage {
     const id = this.domainIdCounter++;
     const createdAt = new Date();
     const lastUpdated = new Date();
-    const newDomain: Domain = { id, ...domain, lastUpdated, createdAt };
+    const newDomain: Domain = { 
+      id,
+      name: domain.name,
+      organizationId: domain.organizationId,
+      providerId: domain.providerId,
+      isActive: domain.isActive ?? true,
+      lastUpdated,
+      createdAt
+    };
     this.domainsMap.set(id, newDomain);
     return newDomain;
   }
