@@ -109,6 +109,8 @@ export class MemStorage implements IStorage {
   private webhooksMap: Map<number, Webhook>;
   private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
   private metricsMap: Map<number, DnsMetric>;
+  private groupsMap: Map<number, Group>;
+  private groupMembersMap: Map<number, GroupMember>;
   
   // Counters for IDs
   private userIdCounter: number;
@@ -121,6 +123,8 @@ export class MemStorage implements IStorage {
   private webhookIdCounter: number;
   private webhookDeliveryLogIdCounter: number;
   private metricIdCounter: number;
+  private groupIdCounter: number;
+  private groupMemberIdCounter: number;
   
   public sessionStore: any;
 
@@ -135,6 +139,8 @@ export class MemStorage implements IStorage {
     this.webhooksMap = new Map();
     this.webhookDeliveryLogsMap = new Map();
     this.metricsMap = new Map();
+    this.groupsMap = new Map();
+    this.groupMembersMap = new Map();
     
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
@@ -146,6 +152,8 @@ export class MemStorage implements IStorage {
     this.webhookIdCounter = 1;
     this.webhookDeliveryLogIdCounter = 1;
     this.metricIdCounter = 1;
+    this.groupIdCounter = 1;
+    this.groupMemberIdCounter = 1;
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -254,6 +262,67 @@ export class MemStorage implements IStorage {
   
   async deleteOrganization(id: string): Promise<boolean> {
     return this.orgsMap.delete(parseInt(id));
+  }
+  
+  // Group management
+  async getGroup(id: string): Promise<Group | undefined> {
+    return this.groupsMap.get(parseInt(id));
+  }
+  
+  async getGroups(): Promise<Group[]> {
+    return Array.from(this.groupsMap.values());
+  }
+  
+  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return Array.from(this.groupMembersMap.values())
+      .filter(member => member.groupId === groupId);
+  }
+  
+  async createGroup(group: InsertGroup): Promise<Group> {
+    const numId = this.groupIdCounter++;
+    const createdAt = new Date();
+    const newGroup: Group = {
+      id: numId.toString(),
+      name: group.name,
+      description: group.description || null,
+      organizationId: group.organizationId,
+      isActive: group.isActive ?? true,
+      createdAt
+    };
+    this.groupsMap.set(numId, newGroup);
+    return newGroup;
+  }
+  
+  async updateGroup(id: string, groupData: Partial<InsertGroup>): Promise<Group | undefined> {
+    const numId = parseInt(id);
+    const group = await this.getGroup(id);
+    if (!group) return undefined;
+    
+    const updatedGroup = { ...group, ...groupData };
+    this.groupsMap.set(numId, updatedGroup);
+    return updatedGroup;
+  }
+  
+  async deleteGroup(id: string): Promise<boolean> {
+    return this.groupsMap.delete(parseInt(id));
+  }
+  
+  async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
+    const numId = this.groupMemberIdCounter++;
+    const createdAt = new Date();
+    const newMember: GroupMember = {
+      id: numId.toString(),
+      groupId: member.groupId,
+      memberId: member.memberId,
+      memberType: member.memberType,
+      createdAt
+    };
+    this.groupMembersMap.set(numId, newMember);
+    return newMember;
+  }
+  
+  async removeGroupMember(id: string): Promise<boolean> {
+    return this.groupMembersMap.delete(parseInt(id));
   }
   
   // Domains
