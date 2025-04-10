@@ -14,6 +14,7 @@ import UsersRolesPage from "@/pages/users-roles";
 import ProvidersPage from "@/pages/providers";
 import SettingsPage from "@/pages/settings";
 import OrganizationsPage from "@/pages/organizations";
+import WebhooksPage from "@/pages/webhooks";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -32,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/api-tokens" component={ApiTokensPage} />
       <ProtectedRoute path="/users-roles" component={UsersRolesPage} />
       <ProtectedRoute path="/providers" component={ProvidersPage} />
+      <ProtectedRoute path="/webhooks" component={WebhooksPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
