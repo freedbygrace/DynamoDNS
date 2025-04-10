@@ -180,7 +180,62 @@ export class MemStorage implements IStorage {
       name: "Default Organization",
       isActive: true
     };
-    this.createOrganization(defaultOrg);
+    const organization = this.createOrganization(defaultOrg);
+    
+    // Create a sample admin user with fixed ID to properly reference it
+    let adminUser: User;
+    const existingAdmin = Array.from(this.usersMap.values()).find(user => user.username === "admin");
+    if (existingAdmin) {
+      adminUser = existingAdmin;
+    } else {
+      adminUser = {
+        id: "1",
+        username: "admin",
+        password: "hashed_password", // This would be properly hashed in production
+        email: "admin@example.com",
+        fullName: "System Admin",
+        role: "admin",
+        organizationId: organization.id,
+        createdAt: new Date()
+      };
+      this.usersMap.set(1, adminUser);
+      this.userIdCounter = 2; // Ensure the next ID is after our fixed one
+    }
+    
+    // Create sample groups
+    const adminGroup: InsertGroup = {
+      name: "Administrators",
+      description: "Group for administrators with full system access",
+      isActive: true,
+      createdBy: adminUser.id,
+      parentGroupId: null
+    };
+    const adminsGroup = this.createGroup(adminGroup);
+    
+    const dnsManagersGroup: InsertGroup = {
+      name: "DNS Managers",
+      description: "Group for users who can manage DNS records",
+      isActive: true,
+      createdBy: adminUser.id,
+      parentGroupId: null
+    };
+    const dnsGroup = this.createGroup(dnsManagersGroup);
+    
+    // Add the admin user to the administrators group
+    this.addGroupMember({
+      groupId: adminsGroup.id,
+      memberId: adminUser.id,
+      memberType: "user",
+      addedBy: adminUser.id
+    });
+    
+    // Add the organization to the DNS managers group
+    this.addGroupMember({
+      groupId: dnsGroup.id,
+      memberId: organization.id,
+      memberType: "organization",
+      addedBy: adminUser.id
+    });
   }
 
   // Users
