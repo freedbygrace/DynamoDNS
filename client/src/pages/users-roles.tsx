@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { User, InsertUser, userRoles, UserRole } from "@shared/schema";
+import { User, InsertUser, systemRoles, UserRole } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +76,7 @@ const userFormSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
-  role: z.enum(userRoles as [string, ...string[]]),
+  role: z.enum(systemRoles as [string, ...string[]]),
   organizationId: z.number().optional(),
 });
 
@@ -119,7 +119,7 @@ export default function UsersRolesPage() {
   // Form for editing a user's role
   const editRoleForm = useForm<{ role: UserRole }>({
     resolver: zodResolver(z.object({
-      role: z.enum(userRoles as [string, ...string[]]),
+      role: z.enum(systemRoles as [string, ...string[]]),
     })),
     defaultValues: {
       role: "user",
@@ -551,7 +551,7 @@ export default function UsersRolesPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {userRoles.map(role => (
+                        {systemRoles.map(role => (
                           <SelectItem key={role} value={role}>
                             {role.charAt(0).toUpperCase() + role.slice(1)}
                           </SelectItem>
@@ -642,7 +642,7 @@ export default function UsersRolesPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {userRoles.map(role => (
+                        {systemRoles.map(role => (
                           <SelectItem key={role} value={role}>
                             {role.charAt(0).toUpperCase() + role.slice(1)}
                           </SelectItem>
