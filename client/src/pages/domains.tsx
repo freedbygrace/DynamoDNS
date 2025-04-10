@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainTable } from "@/components/domain/domain-table";
+import { DomainDetails } from "@/components/domain/domain-details";
 import { Domain, InsertDomain, Provider } from "@shared/schema";
 import { useOrganization } from "@/context/organization-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 // Domain name regex
 const domainRegex = /^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,}$/;
@@ -65,6 +66,7 @@ export default function DomainsPage() {
   const [isAddDomainDialogOpen, setIsAddDomainDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
+  const [activeDomain, setActiveDomain] = useState<Domain | null>(null);
 
   // Fetch domains
   const { data: domains = [], isLoading } = useQuery<Domain[]>({
@@ -156,8 +158,12 @@ export default function DomainsPage() {
 
   // Handle domain management
   const handleManageDomain = (domain: Domain) => {
-    // Navigate to DNS records for this domain
-    window.location.href = `/dns-records?domainId=${domain.id}`;
+    setActiveDomain(domain);
+  };
+
+  // Return to domain list
+  const handleBackToDomains = () => {
+    setActiveDomain(null);
   };
 
   // Handle domain deletion
@@ -170,6 +176,10 @@ export default function DomainsPage() {
   const confirmDeleteDomain = () => {
     if (selectedDomain) {
       deleteDomainMutation.mutate(selectedDomain.id);
+      // If the deleted domain is the active domain, return to the domain list
+      if (activeDomain && activeDomain.id === selectedDomain.id) {
+        setActiveDomain(null);
+      }
     }
   };
 
@@ -178,22 +188,42 @@ export default function DomainsPage() {
       title="Domains"
       description="Manage your DNS domains across providers."
     >
-      <div className="mb-6 flex justify-end">
-        <Button onClick={() => setIsAddDomainDialogOpen(true)}>
-          Add Domain
-        </Button>
-      </div>
+      {!activeDomain ? (
+        // Domain list view
+        <>
+          <div className="mb-6 flex justify-end">
+            <Button onClick={() => setIsAddDomainDialogOpen(true)}>
+              Add Domain
+            </Button>
+          </div>
 
-      {/* Domains Table */}
-      <DomainTable 
-        onManageDomain={handleManageDomain}
-        onDeleteDomain={handleDeleteDomain}
-        onAddDomain={() => setIsAddDomainDialogOpen(true)}
-      />
+          {/* Domains Table */}
+          <DomainTable 
+            onManageDomain={handleManageDomain}
+            onDeleteDomain={handleDeleteDomain}
+            onAddDomain={() => setIsAddDomainDialogOpen(true)}
+          />
+        </>
+      ) : (
+        // Domain detail view with DNS records
+        <>
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={handleBackToDomains}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Domains
+            </Button>
+            <DomainDetails domain={activeDomain} />
+          </div>
+        </>
+      )}
 
       {/* Add Domain Dialog */}
       <Dialog open={isAddDomainDialogOpen} onOpenChange={setIsAddDomainDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Domain</DialogTitle>
             <DialogDescription>
@@ -270,7 +300,7 @@ export default function DomainsPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
