@@ -6,7 +6,8 @@ import {
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
   type DnsHistory,
-  type Webhook, type InsertWebhook
+  type Webhook, type InsertWebhook,
+  type WebhookDeliveryLog, type InsertWebhookDeliveryLog
 } from "@shared/schema";
 import session from "express-session";
 import { DatabaseStorage } from "./database-storage";
@@ -88,6 +89,7 @@ export class MemStorage implements IStorage {
   private apiTokensMap: Map<number, ApiToken>;
   private historyMap: Map<number, DnsHistory>;
   private webhooksMap: Map<number, Webhook>;
+  private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
   
   // Counters for IDs
   private userIdCounter: number;
@@ -98,6 +100,7 @@ export class MemStorage implements IStorage {
   private apiTokenIdCounter: number;
   private historyIdCounter: number;
   private webhookIdCounter: number;
+  private webhookDeliveryLogIdCounter: number;
   
   public sessionStore: any;
 
@@ -110,6 +113,7 @@ export class MemStorage implements IStorage {
     this.apiTokensMap = new Map();
     this.historyMap = new Map();
     this.webhooksMap = new Map();
+    this.webhookDeliveryLogsMap = new Map();
     
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
@@ -119,6 +123,7 @@ export class MemStorage implements IStorage {
     this.apiTokenIdCounter = 1;
     this.historyIdCounter = 1;
     this.webhookIdCounter = 1;
+    this.webhookDeliveryLogIdCounter = 1;
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -503,8 +508,38 @@ export class MemStorage implements IStorage {
     if (!webhook || !webhook.isActive) return false;
 
     try {
+      // Using the webhook utility to deliver the webhook
+      const { generateSignature, deliverWebhook } = await import('./utils/webhook');
+      
       // In a real implementation, this would make an HTTP request to the webhook URL
       console.log(`Triggering webhook ${webhook.name} (${webhook.id}) with payload:`, payload);
+      
+      // Generate signature for the payload if a secret is set
+      const signature = webhook.secret ? generateSignature(payload, webhook.secret) : '';
+      
+      // In a real implementation, this would make the actual HTTP request
+      // For now, simulate a successful delivery
+      const deliveryResult = {
+        success: true,
+        statusCode: 200,
+        message: 'Webhook delivered successfully (simulated)',
+        timestamp: new Date(),
+        responseBody: JSON.stringify({ success: true }),
+        retryCount: 0
+      };
+      
+      // Log the delivery attempt
+      await this.addWebhookDeliveryLog({
+        webhookId: webhook.id,
+        event: payload.event || 'unknown',
+        payload,
+        signature,
+        status: deliveryResult.success,
+        statusCode: deliveryResult.statusCode,
+        message: deliveryResult.message,
+        responseBody: deliveryResult.responseBody,
+        retryCount: deliveryResult.retryCount
+      });
       
       // Update the lastTriggered timestamp
       const updatedWebhook = { 
@@ -516,8 +551,53 @@ export class MemStorage implements IStorage {
       return true;
     } catch (error) {
       console.error(`Error triggering webhook ${webhook.id}:`, error);
+      
+      // Log the failed delivery attempt
+      await this.addWebhookDeliveryLog({
+        webhookId: webhook.id,
+        event: payload.event || 'unknown',
+        payload,
+        signature: '',
+        status: false,
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        retryCount: 0
+      });
+      
       return false;
     }
+  }
+  
+  // Webhook Delivery Logs
+  async addWebhookDeliveryLog(log: InsertWebhookDeliveryLog): Promise<WebhookDeliveryLog> {
+    const numId = this.webhookDeliveryLogIdCounter++;
+    const createdAt = new Date();
+    
+    const newLog: WebhookDeliveryLog = {
+      id: numId.toString(),
+      webhookId: log.webhookId,
+      event: log.event,
+      payload: log.payload,
+      signature: log.signature || null,
+      status: log.status,
+      statusCode: log.statusCode || null,
+      message: log.message,
+      responseBody: log.responseBody || null,
+      retryCount: log.retryCount || 0,
+      createdAt
+    };
+    
+    this.webhookDeliveryLogsMap.set(numId, newLog);
+    return newLog;
+  }
+  
+  async getWebhookDeliveryLog(id: string): Promise<WebhookDeliveryLog | undefined> {
+    return this.webhookDeliveryLogsMap.get(parseInt(id));
+  }
+  
+  async getWebhookDeliveryLogsByWebhook(webhookId: string): Promise<WebhookDeliveryLog[]> {
+    return Array.from(this.webhookDeliveryLogsMap.values())
+      .filter(log => log.webhookId === webhookId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
 
