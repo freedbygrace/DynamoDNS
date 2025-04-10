@@ -743,6 +743,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DNS Metrics
+  app.get("/api/dns-metrics", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const metricType = req.query.type ? req.query.type as string : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const metrics = await storage.getDnsMetricsByType(
+        metricType || "all",
+        startDate,
+        endDate
+      );
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching DNS metrics:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/dns-metrics/domain/:domainId", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const domainId = req.params.domainId;
+      const metricType = req.query.type ? req.query.type as string : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const metrics = await storage.getDnsMetricsByDomain(
+        domainId,
+        metricType,
+        startDate,
+        endDate
+      );
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching domain DNS metrics:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/dns-metrics/record/:recordId", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const recordId = req.params.recordId;
+      const metricType = req.query.type ? req.query.type as string : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const metrics = await storage.getDnsMetricsByRecord(
+        recordId,
+        metricType,
+        startDate,
+        endDate
+      );
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching record DNS metrics:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/dns-metrics", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const validatedData = insertDnsMetricSchema.parse(req.body);
+      const metric = await storage.addDnsMetric(validatedData);
+      res.status(201).json(metric);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error creating DNS metric:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   // Webhooks
   app.get("/api/webhooks", requireRole(["admin", "manager"]), async (req, res) => {
     try {
