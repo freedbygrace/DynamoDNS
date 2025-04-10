@@ -508,36 +508,46 @@ export class MemStorage implements IStorage {
     if (!webhook || !webhook.isActive) return false;
 
     try {
-      // Using the webhook utility to deliver the webhook
-      const { generateSignature, deliverWebhook } = await import('./utils/webhook');
+      // Import the webhook utility functions
+      const webhookUtils = await import('./utils/webhook');
       
-      // In a real implementation, this would make an HTTP request to the webhook URL
-      console.log(`Triggering webhook ${webhook.name} (${webhook.id}) with payload:`, payload);
+      console.log(`Triggering webhook ${webhook.name} (${webhook.id})`);
       
-      // Generate signature for the payload if a secret is set
-      const signature = webhook.secret ? generateSignature(payload, webhook.secret) : '';
+      // Setup delivery options with the provided retry count
+      const deliveryOptions = {
+        startRetryCount: retryCount
+      };
       
-      // Determine if this is a retry
+      // In a real implementation with an actual HTTP request, this would call
+      // the deliverWebhook function. For now, we'll simulate the delivery
+      // to avoid making actual HTTP requests in the demo environment.
+      
+      // Simulated webhook delivery (for demo purposes only)
       const isRetry = retryCount > 0;
-      console.log(`${isRetry ? 'Retrying' : 'Triggering'} webhook delivery (attempt ${retryCount + 1})`);
-      
-      // In a real implementation, this would make the actual HTTP request
-      // For now, simulate a successful delivery
       const deliveryResult = {
         success: true,
         statusCode: 200,
-        message: `Webhook delivered successfully (simulated)${isRetry ? ' after retry' : ''}`,
+        message: isRetry ? 
+          `Webhook delivered successfully after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'} (simulated)` : 
+          'Webhook delivered successfully (simulated)',
         timestamp: new Date(),
-        responseBody: JSON.stringify({ success: true }),
-        retryCount: retryCount
+        responseBody: JSON.stringify({ 
+          success: true, 
+          received_at: new Date().toISOString(),
+          message: "Webhook received successfully"
+        }),
+        retryCount
       };
+      
+      // In a production environment, you would use the actual delivery code:
+      // const deliveryResult = await deliverWebhook(webhook, payload, deliveryOptions);
       
       // Log the delivery attempt
       await this.addWebhookDeliveryLog({
         webhookId: webhook.id,
         event: payload.event || 'unknown',
         payload,
-        signature,
+        signature: webhook.secret ? 'simulated-signature' : '',
         status: deliveryResult.success,
         statusCode: deliveryResult.statusCode,
         message: deliveryResult.message,
