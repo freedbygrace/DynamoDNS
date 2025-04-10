@@ -131,7 +131,7 @@ export function setupAuth(app: Express) {
     password: z.string().min(8).max(100),
     email: z.string().email(),
     fullName: z.string().optional(),
-    organizationId: z.number().optional()
+    organizationId: z.string().uuid().optional()
   });
 
   app.post("/api/register", async (req, res, next) => {
