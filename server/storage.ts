@@ -69,7 +69,7 @@ export interface IStorage {
   createWebhook(webhook: InsertWebhook): Promise<Webhook>;
   updateWebhook(id: string, webhook: Partial<InsertWebhook>): Promise<Webhook | undefined>;
   deleteWebhook(id: string): Promise<boolean>;
-  triggerWebhook(webhookId: string, payload: any): Promise<boolean>;
+  triggerWebhook(webhookId: string, payload: any, retryCount?: number): Promise<boolean>;
   
   // Webhook Delivery Logs
   addWebhookDeliveryLog(log: InsertWebhookDeliveryLog): Promise<WebhookDeliveryLog>;
@@ -503,7 +503,7 @@ export class MemStorage implements IStorage {
     return this.webhooksMap.delete(parseInt(id));
   }
 
-  async triggerWebhook(webhookId: string, payload: any): Promise<boolean> {
+  async triggerWebhook(webhookId: string, payload: any, retryCount: number = 0): Promise<boolean> {
     const webhook = await this.getWebhook(webhookId);
     if (!webhook || !webhook.isActive) return false;
 
@@ -517,15 +517,19 @@ export class MemStorage implements IStorage {
       // Generate signature for the payload if a secret is set
       const signature = webhook.secret ? generateSignature(payload, webhook.secret) : '';
       
+      // Determine if this is a retry
+      const isRetry = retryCount > 0;
+      console.log(`${isRetry ? 'Retrying' : 'Triggering'} webhook delivery (attempt ${retryCount + 1})`);
+      
       // In a real implementation, this would make the actual HTTP request
       // For now, simulate a successful delivery
       const deliveryResult = {
         success: true,
         statusCode: 200,
-        message: 'Webhook delivered successfully (simulated)',
+        message: `Webhook delivered successfully (simulated)${isRetry ? ' after retry' : ''}`,
         timestamp: new Date(),
         responseBody: JSON.stringify({ success: true }),
-        retryCount: 0
+        retryCount: retryCount
       };
       
       // Log the delivery attempt
@@ -538,7 +542,7 @@ export class MemStorage implements IStorage {
         statusCode: deliveryResult.statusCode,
         message: deliveryResult.message,
         responseBody: deliveryResult.responseBody,
-        retryCount: deliveryResult.retryCount
+        retryCount
       });
       
       // Update the lastTriggered timestamp
@@ -560,7 +564,7 @@ export class MemStorage implements IStorage {
         signature: '',
         status: false,
         message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        retryCount: 0
+        retryCount
       });
       
       return false;
