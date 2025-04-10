@@ -372,11 +372,11 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="truncate max-w-[150px] inline-block">
-                              {record.content}
+                              {record.isAutoIP ? "Auto IP" : record.content}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{record.content}</p>
+                            <p>{record.isAutoIP ? "Auto IP" : record.content}</p>
                             {record.notes && (
                               <>
                                 <div className="border-t my-1"></div>
@@ -396,7 +396,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     </TableCell>
                     <TableCell>
                       {record.isActive ? (
-                        <Badge variant="success">Active</Badge>
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
                       ) : (
                         <Badge variant="secondary">Inactive</Badge>
                       )}
@@ -547,26 +547,51 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Content</FormLabel>
-                    <FormControl>
-                      <Input placeholder="192.168.1.1, example.com, etc" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
-                      {form.watch("type") === "AAAA" && "IPv6 address"}
-                      {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
-                      {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
-                      {form.watch("type") === "TXT" && "Text content"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
+                <FormField
+                  control={form.control}
+                  name="isAutoIP"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto IP Address</FormLabel>
+                        <FormDescription>
+                          Automatically determine IP address using STUN
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {(!form.watch("isAutoIP") || (form.watch("type") !== "A" && form.watch("type") !== "AAAA")) && (
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content</FormLabel>
+                      <FormControl>
+                        <Input placeholder="192.168.1.1, example.com, etc" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
+                        {form.watch("type") === "AAAA" && "IPv6 address"}
+                        {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
+                        {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
+                        {form.watch("type") === "TXT" && "Text content"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               
               <FormField
                 control={form.control}
@@ -631,29 +656,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                   </FormItem>
                 )}
               />
-              
-              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
-                <FormField
-                  control={form.control}
-                  name="isAutoIP"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Auto IP Address</FormLabel>
-                        <FormDescription>
-                          Automatically determine IP address using STUN
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
               
               <FormField
                 control={form.control}
@@ -787,26 +789,51 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Content</FormLabel>
-                    <FormControl>
-                      <Input placeholder="192.168.1.1, example.com, etc" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
-                      {form.watch("type") === "AAAA" && "IPv6 address"}
-                      {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
-                      {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
-                      {form.watch("type") === "TXT" && "Text content"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
+                <FormField
+                  control={form.control}
+                  name="isAutoIP"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto IP Address</FormLabel>
+                        <FormDescription>
+                          Automatically determine IP address using STUN
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {(!form.watch("isAutoIP") || (form.watch("type") !== "A" && form.watch("type") !== "AAAA")) && (
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content</FormLabel>
+                      <FormControl>
+                        <Input placeholder="192.168.1.1, example.com, etc" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        {form.watch("type") === "A" && "IP address (e.g. 192.168.1.1)"}
+                        {form.watch("type") === "AAAA" && "IPv6 address"}
+                        {form.watch("type") === "CNAME" && "Domain name (e.g. example.com)"}
+                        {form.watch("type") === "MX" && "Mail server (e.g. mail.example.com)"}
+                        {form.watch("type") === "TXT" && "Text content"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               
               <FormField
                 control={form.control}
@@ -871,29 +898,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                   </FormItem>
                 )}
               />
-              
-              {(form.watch("type") === "A" || form.watch("type") === "AAAA") && (
-                <FormField
-                  control={form.control}
-                  name="isAutoIP"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Auto IP Address</FormLabel>
-                        <FormDescription>
-                          Automatically determine IP address using STUN
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
               
               <FormField
                 control={form.control}
