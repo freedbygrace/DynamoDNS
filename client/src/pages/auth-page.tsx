@@ -24,7 +24,7 @@ const registerSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
-  organizationId: z.number().optional(),
+  organizationId: z.string().optional(),
 });
 
 export default function AuthPage() {
@@ -212,8 +212,8 @@ export default function AuthPage() {
                           <FormControl>
                             <Select
                               disabled={orgsLoading}
-                              onValueChange={(value) => field.onChange(parseInt(value))}
-                              value={field.value?.toString() || ""}
+                              onValueChange={(value) => field.onChange(value)}
+                              value={field.value || ""}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select an organization (optional)" />

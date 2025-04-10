@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Domain } from "@shared/schema";
+import { Domain, Provider } from "@shared/schema";
 import { Link } from "wouter";
 import { useOrganization } from "@/context/organization-context";
 import { Pagination } from "@/components/shared/pagination";
@@ -38,16 +38,16 @@ export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps
   });
 
   // Get providers to display provider names
-  const { data: providers = [] } = useQuery({
+  const { data: providers = [] } = useQuery<Provider[]>({
     queryKey: ["/api/providers"],
   });
 
-  const getProviderName = (providerId: number) => {
+  const getProviderName = (providerId: string) => {
     const provider = providers.find(p => p.id === providerId);
     return provider?.name || "Unknown";
   };
 
-  const getProviderIcon = (providerId: number) => {
+  const getProviderIcon = (providerId: string) => {
     const provider = providers.find(p => p.id === providerId);
     
     if (!provider) return <CircleHelp className="mr-2 text-primary" size={16} />;
@@ -175,7 +175,7 @@ export function DomainTable({ onManageDomain, onDeleteDomain }: DomainTableProps
                 </TableCell>
                 <TableCell>
                   <Link href={`/dns-records?domainId=${domain.id}`}>
-                    <a className="text-primary hover:underline">View Records</a>
+                    <div className="text-primary hover:underline cursor-pointer">View Records</div>
                   </Link>
                 </TableCell>
                 <TableCell>
