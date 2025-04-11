@@ -968,16 +968,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/api-tokens", requireRole(["admin", "manager"]), async (req, res) => {
     try {
+      // Log the full request body first
+      console.log("Full token creation request body:", JSON.stringify(req.body, null, 2));
+      
       // Generate a random token
       const tokenValue = randomBytes(32).toString('hex');
       
-      // Prepare tokenData with values provided explicitly
-      const { name, role, expiresAt, organizationId, isActive } = req.body;
-      
-      // Log what we received for debugging
-      console.log("Token creation request body:", {
-        name, role, expiresAt, organizationId, isActive
-      });
+      // Extract fields from request body, with defaults where needed
+      const name = req.body.name || "Unnamed Token";
+      const role = req.body.role || "readonly";
+      const organizationId = req.body.organizationId || "1";
+      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
       
       // Set default permissions based on the role
       let permissions = [];
@@ -991,44 +992,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         permissions = ['readonly'];
       }
       
-      // Create token data object with all required fields
-      let tokenObj: any = {
+      // Create token data as a plain object (bypass schema validation)
+      const tokenData = {
         name: name,
         token: tokenValue,
         organizationId: organizationId,
         permissions: permissions,
         role: role,
-        createdBy: req.user?.id || '1', // Provide a fallback ID for admin
-        isActive: isActive !== undefined ? isActive : true
+        createdBy: req.user?.id || '1',
+        isActive: isActive
       };
       
-      // Handle expires date properly
-      if (expiresAt) {
-        // If it's a string that looks like a date, convert it to a Date object
-        if (typeof expiresAt === 'string' && expiresAt.match(/^\d{4}-\d{2}-\d{2}/)) {
-          tokenObj.expiresAt = new Date(expiresAt);
-        } else if (expiresAt instanceof Date) {
-          tokenObj.expiresAt = expiresAt;
+      // Handle expiration date directly from form data
+      if (req.body.expiresIn && req.body.expiresIn !== 'never') {
+        const now = new Date();
+        
+        if (req.body.expiresIn === 'custom' && req.body.customDate) {
+          // For custom date/time
+          try {
+            const customDate = new Date(req.body.customDate);
+            
+            // If time was selected, add it to the date
+            if (req.body.customTime) {
+              const [hours, minutes] = req.body.customTime.split(':').map(Number);
+              if (!isNaN(hours) && !isNaN(minutes)) {
+                customDate.setHours(hours, minutes, 0, 0);
+              } else {
+                customDate.setHours(23, 59, 59, 999);
+              }
+            } else {
+              customDate.setHours(23, 59, 59, 999);
+            }
+            
+            tokenData.expiresAt = customDate;
+            console.log("Custom expiration date set to:", customDate);
+          } catch (e) {
+            console.error("Error parsing custom date:", e);
+          }
+        } else {
+          // For preset expiration options
+          let daysToAdd = 0;
+          
+          switch (req.body.expiresIn) {
+            case '1hour':
+              tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+              break;
+            case '1day':
+              tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              break;
+            case '7days':
+              tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              break;
+            case '30days':
+              tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              break;
+            case '90days':
+              tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+              break;
+            case '1year':
+              tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+              break;
+          }
         }
       }
       
-      // Final tokenData
-      const tokenData = tokenObj;
-      
       console.log("Final token data for storage:", tokenData);
       
+      // Skip schema validation, call storage directly
       const token = await storage.createApiToken(tokenData);
       
       // Return the full token only on creation
       res.status(201).json(token);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.log("API Token Validation error details:", JSON.stringify(error.errors, null, 2));
-        res.status(400).json({ message: "Validation error", errors: error.errors });
-      } else {
-        console.error("Error creating API token:", error);
-        res.status(500).json({ message: "Internal server error" });
-      }
+      console.error("Error creating API token:", error);
+      res.status(500).json({ 
+        message: "Error creating token", 
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
