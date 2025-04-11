@@ -175,13 +175,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedRecords = await Promise.all(records.map(async (record) => {
         // For A records with auto IP enabled, fetch the current IP
         if (record.isAutoIP && (record.type === 'A' || record.type === 'AAAA')) {
+          console.log(`Processing AutoIP record: ${record.id}, type: ${record.type}, name: ${record.name}`);
           try {
             // Get the appropriate IP address based on record type
             let currentIp = null;
             if (record.type === 'A') {
+              console.log(`Fetching IPv4 address for record ${record.id}`);
               currentIp = await getCurrentIpAddress();
+              console.log(`Fetched IPv4 address: ${currentIp}`);
             } else if (record.type === 'AAAA') {
+              console.log(`Fetching IPv6 address for record ${record.id}`);
               currentIp = await getCurrentIpv6Address();
+              console.log(`Fetched IPv6 address: ${currentIp}`);
             }
             
             if (currentIp) {
@@ -216,21 +221,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dns-records/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
     try {
       const recordId = req.params.id;
+      console.log(`Fetching DNS record with ID: ${recordId}`);
+      
       const record = await storage.getDnsRecord(recordId);
       
       if (!record) {
+        console.log(`DNS record not found with ID: ${recordId}`);
         return res.status(404).json({ message: "DNS record not found" });
       }
       
+      console.log(`Found DNS record: ${JSON.stringify(record)}`);
+      
       // For A/AAAA records with auto IP enabled, fetch the current IP address
       if (record.isAutoIP && (record.type === 'A' || record.type === 'AAAA')) {
+        console.log(`Processing AutoIP record: ${record.id}, type: ${record.type}, name: ${record.name}`);
         try {
           // Get the appropriate IP address based on record type
           let currentIp = null;
           if (record.type === 'A') {
+            console.log(`Fetching IPv4 address for record ${record.id}`);
             currentIp = await getCurrentIpAddress();
+            console.log(`Fetched IPv4 address: ${currentIp}`);
           } else if (record.type === 'AAAA') {
+            console.log(`Fetching IPv6 address for record ${record.id}`);
             currentIp = await getCurrentIpv6Address();
+            console.log(`Fetched IPv6 address: ${currentIp}`);
           }
           
           if (currentIp) {
