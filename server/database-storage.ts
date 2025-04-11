@@ -602,7 +602,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
     try {
-      console.log(`Updating DNS record with ID: ${id}, data:`, JSON.stringify(recordData));
+      console.log(`[DEBUG] Updating DNS record with ID: ${id}, data:`, JSON.stringify(recordData));
       
       // Use direct PostgreSQL for consistency with other methods
       const { pool } = await import('./db');
@@ -610,8 +610,29 @@ export class DatabaseStorage implements IStorage {
       // Filter out fields that don't exist in the database
       const { proxied, isAutoIP, providerId, ...validFields } = recordData as any;
       
+      // Make all fields database-safe before proceeding
+      const dbSafeFields: Record<string, any> = {};
+      Object.entries(validFields).forEach(([key, value]) => {
+        // Convert camelCase to snake_case for database
+        const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        dbSafeFields[dbField] = value;
+      });
+      
+      // Process isActive separately since it's a common toggle
+      if (recordData.isActive !== undefined) {
+        dbSafeFields['is_active'] = recordData.isActive;
+      }
+      
+      // Add isAutoIP if present (maps to auto_update in database)
+      if (isAutoIP !== undefined) {
+        dbSafeFields['auto_update'] = isAutoIP;
+      }
+      
+      // Always update last_updated timestamp
+      dbSafeFields['last_updated'] = new Date().toISOString();
+      
       // Simple case: Just update the timestamp
-      if (Object.keys(validFields).length === 0 && isAutoIP === undefined) {
+      if (Object.keys(dbSafeFields).length === 0) {
         console.log(`Simple update for record ${id} - just updating timestamp`);
         
         const simpleQueryText = `
@@ -651,37 +672,21 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Complex case: Build a dynamic query with proper parameters
-      console.log(`Complex update for record ${id} with fields:`, Object.keys(validFields));
+      console.log(`Complex update for record ${id} with fields:`, Object.keys(dbSafeFields));
       
       // Prepare the SET clause and parameters array
       let setClause = '';
       const params = [id]; // First parameter is always the ID
       let paramIndex = 2; // Start parameter indexing at 2
       
-      // Process valid fields and convert camelCase to snake_case
-      Object.entries(validFields).forEach(([key, value]) => {
-        // Convert camelCase to snake_case for database
-        const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        
+      // Build SET clause from all database-safe fields
+      Object.entries(dbSafeFields).forEach(([dbField, value]) => {
         // Add to SET clause
         if (setClause) setClause += ', ';
         setClause += `${dbField} = $${paramIndex}`;
         params.push(value);
         paramIndex++;
       });
-      
-      // Add isAutoIP if present (maps to auto_update in database)
-      if (isAutoIP !== undefined) {
-        if (setClause) setClause += ', ';
-        setClause += `auto_update = $${paramIndex}`;
-        params.push(isAutoIP);
-        paramIndex++;
-      }
-      
-      // Always update last_updated timestamp
-      if (setClause) setClause += ', ';
-      setClause += `last_updated = $${paramIndex}`;
-      params.push(new Date());
       
       // Complete query with RETURNING clause
       const complexQueryText = `
