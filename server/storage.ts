@@ -190,10 +190,13 @@ export class MemStorage implements IStorage {
       // Create organization synchronously to get its ID directly
       const org = this.createOrganizationSync(defaultOrg);
       
+      // Generate a properly hashed password that matches our auth system
+      const password = "ceb37858eae429c7460e3953bd612541e14c78eab805ab3c5be30dd81572b9669e154dfa320ca0fd67ab2b8c7af55124cf761178ebaef73e5eb73e9431eed84d.7e464ae80b7e8ab6639630035c6d37de";
+      
       adminUser = {
         id: "1",
         username: "admin",
-        password: "hashed_password", // This would be properly hashed in production
+        password: password,
         email: "admin@example.com",
         fullName: "System Admin",
         role: "admin",
