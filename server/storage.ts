@@ -87,6 +87,14 @@ export interface IStorage {
   getDnsMetricsByRecord(recordId: string, metricType?: string, startDate?: Date, endDate?: Date): Promise<DnsMetric[]>;
   getDnsMetricsByType(metricType: string, startDate?: Date, endDate?: Date): Promise<DnsMetric[]>;
   
+  // Custom Roles management
+  getCustomRole(id: string): Promise<CustomRole | undefined>;
+  getCustomRoles(): Promise<CustomRole[]>;
+  getCustomRoleByName(name: string): Promise<CustomRole | undefined>;
+  createCustomRole(role: InsertCustomRole): Promise<CustomRole>;
+  updateCustomRole(id: string, role: Partial<InsertCustomRole>): Promise<CustomRole | undefined>;
+  deleteCustomRole(id: string): Promise<boolean>;
+  
   // Session store
   sessionStore: any;
 }
