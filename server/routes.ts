@@ -5,6 +5,7 @@ import { db } from "./db";
 import { setupAuth, requireRole } from "./auth";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { getCurrentIpAddress, getCurrentIpv6Address } from "./utils/ip-utils";
 import {
   insertDomainSchema,
   insertDnsRecordSchema,
@@ -169,7 +170,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`API endpoint: Fetching DNS records for domain: ${domainId}`);
       const records = await storage.getDnsRecordsByDomain(domainId);
       console.log(`API endpoint: Retrieved ${records.length} DNS records from storage`);
-      res.json(records);
+      
+      // Process records to show current IP for auto IP records
+      const processedRecords = await Promise.all(records.map(async (record) => {
+        // For A records with auto IP enabled, fetch the current IP
+        if (record.isAutoIP && (record.type === 'A' || record.type === 'AAAA')) {
+          try {
+            // Get the appropriate IP address based on record type
+            let currentIp = null;
+            if (record.type === 'A') {
+              currentIp = await getCurrentIpAddress();
+            } else if (record.type === 'AAAA') {
+              currentIp = await getCurrentIpv6Address();
+            }
+            
+            if (currentIp) {
+              console.log(`Found current IP for auto record ${record.id}: ${currentIp}`);
+              // Create a new object to avoid modifying the original record
+              return {
+                ...record,
+                // Store the actual IP in the response for display purposes
+                currentIp: currentIp,
+                // Keep content as is - the UI will show currentIp if isAutoIP is true
+              };
+            }
+          } catch (ipError) {
+            console.error(`Error getting current IP for record ${record.id}:`, ipError);
+          }
+        }
+        
+        // Return the record unmodified if it's not auto IP or if there was an error
+        return record;
+      }));
+      
+      res.json(processedRecords);
     } catch (error) {
       console.error("Error fetching DNS records:", error);
       res.status(500).json({ 
@@ -186,6 +220,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!record) {
         return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      // For A/AAAA records with auto IP enabled, fetch the current IP address
+      if (record.isAutoIP && (record.type === 'A' || record.type === 'AAAA')) {
+        try {
+          // Get the appropriate IP address based on record type
+          let currentIp = null;
+          if (record.type === 'A') {
+            currentIp = await getCurrentIpAddress();
+          } else if (record.type === 'AAAA') {
+            currentIp = await getCurrentIpv6Address();
+          }
+          
+          if (currentIp) {
+            console.log(`Found current IP for auto record ${record.id}: ${currentIp}`);
+            // Create a new object to avoid modifying the original record
+            return res.json({
+              ...record,
+              // Store the actual IP in the response for display purposes
+              currentIp: currentIp
+            });
+          }
+        } catch (ipError) {
+          console.error(`Error getting current IP for record ${record.id}:`, ipError);
+        }
       }
       
       res.json(record);
