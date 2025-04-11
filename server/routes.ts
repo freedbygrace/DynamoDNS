@@ -82,11 +82,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Domain ID is required" });
       }
       
+      console.log(`API endpoint: Fetching DNS records for domain: ${domainId}`);
       const records = await storage.getDnsRecordsByDomain(domainId);
+      console.log(`API endpoint: Retrieved ${records.length} DNS records from storage`);
       res.json(records);
     } catch (error) {
       console.error("Error fetching DNS records:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ 
+        message: "Failed to fetch DNS records", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
