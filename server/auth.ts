@@ -15,7 +15,7 @@ import 'dotenv/config';
 export const CONFIG = {
   // Local auth configuration
   LOCAL_AUTH_ENABLED: process.env.LOCAL_AUTH_ENABLED !== 'false', // Enabled by default
-  DISABLE_REGISTRATION: process.env.DISABLE_REGISTRATION === 'true', // Disabled by default
+  DISABLE_REGISTRATION: process.env.ENABLE_REGISTRATION !== 'true', // Disabled by default
   DEFAULT_ADMIN_USERNAME: process.env.DEFAULT_ADMIN_USERNAME || 'admin',
   DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'password',
   DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com',
