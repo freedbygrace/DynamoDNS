@@ -61,6 +61,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Key, MoreVertical, Calendar, Copy, Info } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -105,8 +112,9 @@ export default function ApiTokensPage() {
     mutationFn: async (data: z.infer<typeof tokenFormSchema>) => {
       const tokenData: Partial<InsertApiToken> = {
         name: data.name,
-        organizationId: currentOrganization?.id || 0,
+        organizationId: currentOrganization?.id || "",
         permissions: data.permissions,
+        role: data.role,
         isActive: true,
       };
       
@@ -226,6 +234,7 @@ export default function ApiTokensPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Token</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Permissions</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead>Status</TableHead>
@@ -240,8 +249,13 @@ export default function ApiTokensPage() {
                       {token.token.substring(0, 8)}...
                     </TableCell>
                     <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {token.role || "readonly"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {token.permissions.map((permission) => (
+                        {token.permissions?.map((permission) => (
                           <Badge key={permission} variant="outline" className="text-xs">
                             {permission}
                           </Badge>
@@ -330,13 +344,47 @@ export default function ApiTokensPage() {
               
               <FormField
                 control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {systemRoles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role === "admin" && "Administrator"}
+                            {role === "manager" && "Manager"}
+                            {role === "user" && "User"}
+                            {role === "readonly" && "Read-only"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Determines the level of access for this token
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
                 name="permissions"
                 render={() => (
                   <FormItem>
                     <div className="mb-4">
                       <FormLabel className="text-base">Permissions</FormLabel>
                       <FormDescription>
-                        Select the permissions for this token
+                        Select specific permissions for this token
                       </FormDescription>
                     </div>
                     {systemRoles.map((role) => (
