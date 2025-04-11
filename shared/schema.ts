@@ -63,6 +63,7 @@ export const dnsRecords = pgTable("dns_records", {
   notes: text("notes"),
   isActive: boolean("is_active").default(true).notNull(),
   isAutoIP: boolean("auto_update").default(false).notNull(), // renamed to match database column
+  proxied: boolean("proxied").default(false), // For Cloudflare proxy setting
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
