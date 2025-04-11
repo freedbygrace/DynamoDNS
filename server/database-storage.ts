@@ -470,7 +470,10 @@ export class DatabaseStorage implements IStorage {
 
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
     try {
+      console.log("Creating DNS record with data:", record);
+      
       // Convert snake_case field names for database compatibility
+      // We don't need providerId as it's not in the db table
       const { proxied, isAutoIP, providerId, ...validFields } = record as any;
       
       // Create SQL query with proper parameterization using SQL template literals
@@ -482,27 +485,28 @@ export class DatabaseStorage implements IStorage {
           ${validFields.domainId},
           ${validFields.name},
           ${validFields.type},
-          ${validFields.content},
+          ${validFields.content || ''},
           ${validFields.ttl || 3600},
           ${validFields.priority || 0},
           ${validFields.isActive !== undefined ? validFields.isActive : true},
           ${isAutoIP !== undefined ? isAutoIP : false},
           ${validFields.notes || null},
           ${new Date()},
-          ${null} -- provider_record_id will be populated when syncing with providers
+          ${validFields.providerRecordId || null}
         ) 
-        RETURNING id, domain_id, name, type, content, ttl, priority,
-          is_active, auto_update, notes, last_updated, created_at, provider_record_id
+        RETURNING *
       `;
       
       // Execute the query directly with SQL template literal
       const result = await db.execute(queryText);
       
       if (!Array.isArray(result) || result.length === 0) {
+        console.error("DNS record creation failed - empty result returned");
         throw new Error("Failed to create DNS record");
       }
       
       const newRecord = result[0];
+      console.log("New DNS record created:", newRecord);
       
       // Return the record with frontend-expected field names
       return {
@@ -519,8 +523,7 @@ export class DatabaseStorage implements IStorage {
         lastUpdated: newRecord.last_updated,
         createdAt: newRecord.created_at,
         providerRecordId: newRecord.provider_record_id,
-        proxied: null, // Add missing fields with null values
-        providerId: null
+        proxied: null // Maintained for frontend compatibility
       };
     } catch (error) {
       console.error("Error in createDnsRecord:", error);
