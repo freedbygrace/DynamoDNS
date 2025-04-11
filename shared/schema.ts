@@ -202,15 +202,20 @@ export const insertProviderSchema = createInsertSchema(providers).pick({
   isActive: true,
 });
 
-export const insertApiTokenSchema = createInsertSchema(apiTokens).pick({
-  name: true,
-  token: true,
-  organizationId: true,
-  permissions: true,
-  role: true,
-  createdBy: true,
-  isActive: true,
-  expiresAt: true,
+// Make all fields optional for maximum flexibility
+export const insertApiTokenSchema = z.object({
+  name: z.string().optional(),
+  token: z.string().optional(),
+  organizationId: z.string().optional(),
+  permissions: z.array(z.string()).optional(),
+  role: z.string().optional(),
+  createdBy: z.string().optional(),
+  isActive: z.boolean().optional(),
+  expiresAt: z.union([z.date(), z.string()]).optional(),
+  // Allow custom expiration fields
+  expiresIn: z.string().optional(),
+  customDate: z.string().optional(),
+  customTime: z.string().optional(),
 });
 
 export const insertCustomRoleSchema = createInsertSchema(customRoles).pick({
