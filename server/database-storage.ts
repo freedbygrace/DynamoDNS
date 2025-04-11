@@ -636,12 +636,10 @@ export class DatabaseStorage implements IStorage {
         dbSafeFields['auto_update'] = isAutoIP;
       }
       
-      // Store proxied value in a metadata field if it's present
-      // Note: We don't have a dedicated proxied column, but we'll return it in the response
+      // Store proxied value in the proxied column if it's present
       if (proxied !== undefined) {
-        console.log(`[DEBUG] Setting metadata field for proxied to ${proxied}`);
-        // You could store this in a 'metadata' JSON field if you have one
-        // For now, we'll just remember to add it back to the response
+        console.log(`[DEBUG] Setting proxied field to ${proxied}`);
+        dbSafeFields['proxied'] = proxied;
       }
       
       // Always update last_updated timestamp
@@ -656,7 +654,7 @@ export class DatabaseStorage implements IStorage {
           SET last_updated = NOW()
           WHERE id = $1
           RETURNING id, domain_id, name, type, content, ttl, priority,
-            provider_record_id, is_active, auto_update, notes, last_updated, created_at
+            provider_record_id, is_active, auto_update, notes, last_updated, created_at, proxied
         `;
         
         const simpleResult = await pool.query(simpleQueryText, [id]);
@@ -683,7 +681,7 @@ export class DatabaseStorage implements IStorage {
           notes: simpleRecord.notes,
           lastUpdated: simpleRecord.last_updated,
           createdAt: simpleRecord.created_at,
-          proxied: proxiedValue // Use the proxied value from the input data or null
+          proxied: simpleRecord.proxied // Use the proxied value from the database
         };
       }
       
@@ -710,7 +708,7 @@ export class DatabaseStorage implements IStorage {
         SET ${setClause}
         WHERE id = $1
         RETURNING id, domain_id, name, type, content, ttl, priority,
-          provider_record_id, is_active, auto_update, notes, last_updated, created_at
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at, proxied
       `;
       
       console.log(`Executing update query with params:`, params);
@@ -739,7 +737,7 @@ export class DatabaseStorage implements IStorage {
         notes: updatedRecord.notes,
         lastUpdated: updatedRecord.last_updated,
         createdAt: updatedRecord.created_at,
-        proxied: proxiedValue // Use the proxied value from the input data
+        proxied: updatedRecord.proxied // Use the proxied value from the database
       };
     } catch (error) {
       console.error("Error in updateDnsRecord:", error);
