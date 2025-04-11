@@ -393,7 +393,15 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
   return (
     <>
       <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-semibold">DNS Records for {domain.name}</h2>
+        <div className="flex items-center space-x-4">
+          {onBack && (
+            <Button variant="outline" onClick={onBack} className="h-9">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="m15 18-6-6 6-6"/></svg>
+              Back
+            </Button>
+          )}
+          <h2 className="text-xl font-semibold">DNS Records for {domain.name}</h2>
+        </div>
         <Button onClick={handleAddRecord}>
           <Plus className="mr-2 h-4 w-4" />
           Add Record
@@ -477,28 +485,20 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                         : "Never"}
                     </TableCell>
                     <TableCell>
-                      {record.isActive ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={record.isActive}
+                          onCheckedChange={(checked) => handleToggleActive(record, checked)}
+                          className="data-[state=checked]:bg-green-500"
+                          size="lg"
+                        />
+                        <span className={record.isActive ? "text-green-700 font-medium" : "text-muted-foreground"}>
+                          {record.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Switch
-                                checked={record.isActive}
-                                onCheckedChange={(checked) => handleToggleActive(record, checked)}
-                                className="mx-2"
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{record.isActive ? "Disable" : "Enable"} record</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                         <Button 
                           variant="ghost" 
                           size="icon"
