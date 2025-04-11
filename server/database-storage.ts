@@ -602,89 +602,108 @@ export class DatabaseStorage implements IStorage {
 
   async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
     try {
+      console.log(`Updating DNS record with ID: ${id}, data:`, JSON.stringify(recordData));
+      
+      // Use direct PostgreSQL for consistency with other methods
+      const { pool } = await import('./db');
+      
       // Filter out fields that don't exist in the database
       const { proxied, isAutoIP, providerId, ...validFields } = recordData as any;
       
-      // If there's only isAutoIP or no fields at all, handle it separately
+      // Simple case: Just update the timestamp
       if (Object.keys(validFields).length === 0 && isAutoIP === undefined) {
-        // Just update the last_updated timestamp
-        const updateQuery = sql`
+        console.log(`Simple update for record ${id} - just updating timestamp`);
+        
+        const simpleQueryText = `
           UPDATE dns_records 
-          SET last_updated = ${new Date()}
-          WHERE id = ${id}
+          SET last_updated = NOW()
+          WHERE id = $1
           RETURNING id, domain_id, name, type, content, ttl, priority,
             provider_record_id, is_active, auto_update, notes, last_updated, created_at
         `;
         
-        const updateResult = await db.execute(updateQuery);
+        const simpleResult = await pool.query(simpleQueryText, [id]);
         
-        if (!Array.isArray(updateResult) || updateResult.length === 0) {
+        if (!simpleResult.rows || simpleResult.rows.length === 0) {
+          console.log(`No record found with ID ${id} for simple update`);
           return undefined;
         }
         
-        const record = updateResult[0];
+        const simpleRecord = simpleResult.rows[0];
+        console.log(`Updated record with simple query:`, simpleRecord);
+        
         return {
-          id: record.id,
-          domainId: record.domain_id,
-          name: record.name,
-          type: record.type,
-          content: record.content,
-          ttl: record.ttl,
-          priority: record.priority,
-          providerRecordId: record.provider_record_id,
-          isActive: record.is_active,
-          isAutoIP: record.auto_update,
-          notes: record.notes,
-          lastUpdated: record.last_updated,
-          createdAt: record.created_at,
+          id: simpleRecord.id,
+          domainId: simpleRecord.domain_id,
+          name: simpleRecord.name,
+          type: simpleRecord.type,
+          content: simpleRecord.content,
+          ttl: simpleRecord.ttl,
+          priority: simpleRecord.priority,
+          providerRecordId: simpleRecord.provider_record_id,
+          isActive: simpleRecord.is_active,
+          isAutoIP: simpleRecord.auto_update,
+          notes: simpleRecord.notes,
+          lastUpdated: simpleRecord.last_updated,
+          createdAt: simpleRecord.created_at,
           proxied: null // Maintained for frontend compatibility
         };
       }
       
-      // Create dynamic SQL for the update
-      // Start with base query
-      let sqlQuery = sql`UPDATE dns_records SET `;
+      // Complex case: Build a dynamic query with proper parameters
+      console.log(`Complex update for record ${id} with fields:`, Object.keys(validFields));
       
-      // Add each field dynamically
-      const setFragments = [];
+      // Prepare the SET clause and parameters array
+      let setClause = '';
+      const params = [id]; // First parameter is always the ID
+      let paramIndex = 2; // Start parameter indexing at 2
       
-      // Process all valid fields
+      // Process valid fields and convert camelCase to snake_case
       Object.entries(validFields).forEach(([key, value]) => {
         // Convert camelCase to snake_case for database
         const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        setFragments.push(sql`${sql.raw(dbField)} = ${value}`);
+        
+        // Add to SET clause
+        if (setClause) setClause += ', ';
+        setClause += `${dbField} = $${paramIndex}`;
+        params.push(value);
+        paramIndex++;
       });
       
-      // Add isAutoIP if it exists (maps to auto_update in database)
+      // Add isAutoIP if present (maps to auto_update in database)
       if (isAutoIP !== undefined) {
-        setFragments.push(sql`auto_update = ${isAutoIP}`);
+        if (setClause) setClause += ', ';
+        setClause += `auto_update = $${paramIndex}`;
+        params.push(isAutoIP);
+        paramIndex++;
       }
       
-      // Always update last_updated
-      setFragments.push(sql`last_updated = ${new Date()}`);
+      // Always update last_updated timestamp
+      if (setClause) setClause += ', ';
+      setClause += `last_updated = $${paramIndex}`;
+      params.push(new Date());
       
-      // Join all the SET fragments
-      for (let i = 0; i < setFragments.length; i++) {
-        sqlQuery = sql`${sqlQuery}${setFragments[i]}`;
-        if (i < setFragments.length - 1) {
-          sqlQuery = sql`${sqlQuery}, `;
-        }
-      }
-      
-      // Add WHERE and RETURNING
-      sqlQuery = sql`${sqlQuery} WHERE id = ${id}
+      // Complete query with RETURNING clause
+      const complexQueryText = `
+        UPDATE dns_records 
+        SET ${setClause}
+        WHERE id = $1
         RETURNING id, domain_id, name, type, content, ttl, priority,
-        provider_record_id, is_active, auto_update, notes, last_updated, created_at`;
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at
+      `;
       
-      // Execute the query
-      const result = await db.execute(sqlQuery);
+      console.log(`Executing update query with params:`, params);
+      const result = await pool.query(complexQueryText, params);
       
-      if (!Array.isArray(result) || result.length === 0) {
+      if (!result.rows || result.rows.length === 0) {
+        console.log(`No record found with ID ${id} for complex update`);
         return undefined;
       }
       
+      const updatedRecord = result.rows[0];
+      console.log(`Updated record with complex query:`, updatedRecord);
+      
       // Map result to expected format
-      const updatedRecord = result[0];
       return {
         id: updatedRecord.id,
         domainId: updatedRecord.domain_id,
