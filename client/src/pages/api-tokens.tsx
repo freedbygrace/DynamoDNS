@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { ApiToken, InsertApiToken, systemRoles } from "@shared/schema";
+import { ApiToken, InsertApiToken, systemRoles, CustomRole } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/context/organization-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -94,6 +94,11 @@ export default function ApiTokensPage() {
     queryKey: ["/api/api-tokens", currentOrganization?.id],
     enabled: !!currentOrganization?.id,
   });
+  
+  // Fetch custom roles
+  const { data: customRoles = [] } = useQuery<CustomRole[]>({
+    queryKey: ["/api/custom-roles"],
+  });
 
   // Form for adding a token
   const form = useForm<z.infer<typeof tokenFormSchema>>({
@@ -166,7 +171,7 @@ export default function ApiTokensPage() {
 
   // Delete token mutation
   const deleteTokenMutation = useMutation({
-    mutationFn: async (tokenId: number) => {
+    mutationFn: async (tokenId: string) => {
       await apiRequest("DELETE", `/api/api-tokens/${tokenId}`);
     },
     onSuccess: () => {
@@ -367,6 +372,10 @@ export default function ApiTokensPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {/* System roles */}
+                        <SelectItem key="system-roles" value="" disabled className="text-muted-foreground">
+                          System Roles
+                        </SelectItem>
                         {systemRoles.map((role) => (
                           <SelectItem key={role} value={role}>
                             {role === "admin" && "Administrator"}
@@ -375,6 +384,20 @@ export default function ApiTokensPage() {
                             {role === "readonly" && "Read-only"}
                           </SelectItem>
                         ))}
+                        
+                        {/* Custom roles */}
+                        {customRoles.length > 0 && (
+                          <>
+                            <SelectItem key="custom-roles" value="" disabled className="text-muted-foreground mt-2">
+                              Custom Roles
+                            </SelectItem>
+                            {customRoles.map((role) => (
+                              <SelectItem key={role.id} value={role.name}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormDescription>
