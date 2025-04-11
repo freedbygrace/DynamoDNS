@@ -390,8 +390,8 @@ export class DatabaseStorage implements IStorage {
       // Use raw SQL to select only columns that actually exist in the database
       const query = sql`
         SELECT 
-          id, domain_id, name, type, content, ttl, 
-          is_active, auto_update, notes, last_updated, created_at
+          id, domain_id, name, type, content, ttl, priority,
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at
         FROM dns_records 
         WHERE id = ${id}
       `;
@@ -412,13 +412,14 @@ export class DatabaseStorage implements IStorage {
         type: record.type,
         content: record.content,
         ttl: record.ttl,
+        priority: record.priority,
+        providerRecordId: record.provider_record_id,
         isActive: record.is_active,
         isAutoIP: record.auto_update, // Map auto_update to isAutoIP
         notes: record.notes,
         lastUpdated: record.last_updated,
         createdAt: record.created_at,
-        proxied: null, // Add missing fields with null values
-        providerId: null
+        proxied: null // Field for frontend compatibility
       };
     } catch (error) {
       console.error("Error in getDnsRecord:", error);
@@ -474,21 +475,23 @@ export class DatabaseStorage implements IStorage {
       // Create SQL query with proper parameterization using SQL template literals
       const queryText = sql`
         INSERT INTO dns_records (
-          domain_id, name, type, content, ttl, 
-          is_active, auto_update, notes, last_updated
+          domain_id, name, type, content, ttl, priority,
+          is_active, auto_update, notes, last_updated, provider_record_id
         ) VALUES (
           ${validFields.domainId},
           ${validFields.name},
           ${validFields.type},
           ${validFields.content},
           ${validFields.ttl || 3600},
+          ${validFields.priority || 0},
           ${validFields.isActive !== undefined ? validFields.isActive : true},
           ${isAutoIP !== undefined ? isAutoIP : false},
           ${validFields.notes || null},
-          ${new Date()}
+          ${new Date()},
+          ${null} -- provider_record_id will be populated when syncing with providers
         ) 
-        RETURNING id, domain_id, name, type, content, ttl, 
-          is_active, auto_update, notes, last_updated, created_at
+        RETURNING id, domain_id, name, type, content, ttl, priority,
+          is_active, auto_update, notes, last_updated, created_at, provider_record_id
       `;
       
       // Execute the query directly with SQL template literal
@@ -508,11 +511,13 @@ export class DatabaseStorage implements IStorage {
         type: newRecord.type,
         content: newRecord.content,
         ttl: newRecord.ttl,
+        priority: newRecord.priority,
         isActive: newRecord.is_active,
         isAutoIP: newRecord.auto_update, // Map auto_update to isAutoIP
         notes: newRecord.notes,
         lastUpdated: newRecord.last_updated,
         createdAt: newRecord.created_at,
+        providerRecordId: newRecord.provider_record_id,
         proxied: null, // Add missing fields with null values
         providerId: null
       };
