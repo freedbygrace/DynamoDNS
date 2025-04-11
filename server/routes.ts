@@ -988,44 +988,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         permissions: [] // Will be populated in storage.ts
       };
       
-      // Handle expiration date
-      if (req.body.expiresIn && req.body.expiresIn !== 'never') {
+      // Handle expiration date based on the expiresIn parameter
+      const expiresIn = req.body.expiresIn || 'never';
+      
+      if (expiresIn !== 'never') {
         const now = new Date();
         
-        if (req.body.expiresIn === 'custom' && req.body.customDate) {
+        if (expiresIn === 'custom') {
           try {
-            console.log("Custom date received:", req.body.customDate);
-            console.log("Custom time received:", req.body.customTime || "none");
-            
-            // Create date from input
-            const customDate = new Date(req.body.customDate);
-            console.log("Parsed customDate:", customDate);
-            
-            // If time was selected, add it to the date
-            if (req.body.customTime) {
-              const [hours, minutes] = req.body.customTime.split(':').map(Number);
-              if (!isNaN(hours) && !isNaN(minutes)) {
-                customDate.setHours(hours, minutes, 0, 0);
-                console.log(`Setting time to ${hours}:${minutes}`);
+            if (req.body.customDate) {
+              console.log("Custom date received:", req.body.customDate);
+              
+              // Parse date (format is YYYY-MM-DD from client)
+              const [year, month, day] = req.body.customDate.split('-').map(Number);
+              
+              if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                throw new Error("Invalid date format. Expected YYYY-MM-DD");
+              }
+              
+              // Create date (months are 0-indexed in JS Date)
+              const customDate = new Date(year, month - 1, day);
+              console.log("Parsed customDate:", customDate);
+              
+              // Add time if specified
+              if (req.body.customTime) {
+                console.log("Custom time received:", req.body.customTime);
+                const [hours, minutes] = req.body.customTime.split(':').map(Number);
+                
+                if (!isNaN(hours) && !isNaN(minutes)) {
+                  customDate.setHours(hours, minutes, 0, 0);
+                  console.log(`Setting time to ${hours}:${minutes}`);
+                } else {
+                  customDate.setHours(23, 59, 59, 999);
+                  console.log("Invalid time format, setting to end of day");
+                }
               } else {
                 customDate.setHours(23, 59, 59, 999);
-                console.log("Invalid time format, setting to end of day");
+                console.log("No time specified, setting to end of day");
               }
+              
+              // Validate the date is in the future
+              if (customDate < now) {
+                throw new Error("Expiration date must be in the future");
+              }
+              
+              tokenData.expiresAt = customDate;
+              console.log("Final custom expiration date:", customDate.toISOString());
             } else {
-              customDate.setHours(23, 59, 59, 999);
-              console.log("No time specified, setting to end of day");
+              throw new Error("Custom date is required for custom expiration");
             }
-            
-            tokenData.expiresAt = customDate;
-            console.log("Final custom expiration date:", customDate);
           } catch (e) {
             console.error("Error parsing custom date:", e);
+            return res.status(400).json({ 
+              message: "Invalid custom date or time", 
+              details: e instanceof Error ? e.message : String(e)
+            });
           }
         } else {
           // For preset expiration options
           let expirationDate: Date | null = null;
           
-          switch (req.body.expiresIn) {
+          switch (expiresIn) {
             case '1hour':
               expirationDate = new Date(now.getTime() + 60 * 60 * 1000);
               break;
@@ -1044,11 +1067,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case '1year':
               expirationDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
               break;
+            default:
+              console.log(`Unrecognized expiresIn value: ${expiresIn}, defaulting to no expiration`);
           }
           
           if (expirationDate) {
             tokenData.expiresAt = expirationDate;
-            console.log(`Setting expiration to ${req.body.expiresIn}:`, expirationDate);
+            console.log(`Setting expiration to ${expiresIn}:`, expirationDate.toISOString());
           }
         }
       } else {
@@ -1066,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating API token:", error);
       // Return detailed error to help debugging
-      res.status(500).json({ 
+      res.status(400).json({ 
         message: "Error creating token", 
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined

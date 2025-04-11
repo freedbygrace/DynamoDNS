@@ -126,72 +126,36 @@ export default function ApiTokensPage() {
   // Add token mutation
   const addTokenMutation = useMutation({
     mutationFn: async (data: z.infer<typeof tokenFormSchema>) => {
-      const tokenData: Partial<any> = {
+      // Instead of using expiresAt directly, send the form data and let the server handle it
+      const tokenData: any = {
         name: data.name,
-        organizationId: currentOrganization?.id || "",
+        organizationId: currentOrganization?.id || "1",
         role: data.role,
         isActive: true,
+        expiresIn: data.expiresIn || 'never',
       };
       
-      // Calculate expiration date based on selection
-      if (data.expiresIn && data.expiresIn !== 'never') {
-        const now = new Date();
-        
-        if (data.expiresIn === 'custom' && data.customDate) {
-          // For custom date/time
-          if (data.customDate) {
-            const customDate = new Date(data.customDate);
-            
-            // If time was selected, add it to the date
-            if (data.customTime) {
-              const [hours, minutes] = data.customTime.split(':').map(Number);
-              // Check if hours and minutes are valid numbers
-              if (!isNaN(hours) && !isNaN(minutes)) {
-                customDate.setHours(hours, minutes, 0, 0);
-              } else {
-                // Default to end of day if time format is invalid
-                customDate.setHours(23, 59, 59, 999);
-              }
-            } else {
-              // Default to end of day if no time selected
-              customDate.setHours(23, 59, 59, 999);
-            }
-            
-            // Server expects ISO string for dates, not JavaScript Date objects
-            tokenData.expiresAt = customDate.toISOString();
-          }
-        } else {
-          // For preset expiration options
-          let expiresAt: Date;
+      // Add custom date and time fields if present
+      if (data.expiresIn === 'custom') {
+        // For custom date/time, pass as separate fields for the server to process
+        if (data.customDate) {
+          // Format the date as YYYY-MM-DD for the server
+          tokenData.customDate = format(data.customDate, 'yyyy-MM-dd');
+          console.log("Sending customDate:", tokenData.customDate);
           
-          switch (data.expiresIn) {
-            case '1hour':
-              expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
-              break;
-            case '1day':
-              expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-              break;
-            case '7days':
-              expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-              break;
-            case '30days':
-              expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-              break;
-            case '90days':
-              expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-              break;
-            case '1year':
-              expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-              break;
-            default:
-              expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          // Add custom time if present
+          if (data.customTime) {
+            tokenData.customTime = data.customTime;
+            console.log("Sending customTime:", data.customTime);
+          } else {
+            // Default to end of day if no time
+            tokenData.customTime = "23:59";
+            console.log("Using default end of day time");
           }
-          
-          // Server expects ISO string for dates, not JavaScript Date objects
-          tokenData.expiresAt = expiresAt.toISOString();
         }
       }
       
+      console.log("Sending token data to server:", tokenData);
       const res = await apiRequest("POST", "/api/api-tokens", tokenData);
       return await res.json();
     },
