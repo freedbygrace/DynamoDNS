@@ -9,8 +9,6 @@ import {
   type Webhook, type InsertWebhook,
   type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
   type DnsMetric, type InsertDnsMetric,
-  type Group, type InsertGroup,
-  type GroupMember, type InsertGroupMember,
   type MemberType
 } from "@shared/schema";
 import session from "express-session";
@@ -32,15 +30,7 @@ export interface IStorage {
   updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
   deleteOrganization(id: string): Promise<boolean>;
   
-  // Group management
-  getGroup(id: string): Promise<Group | undefined>;
-  getGroups(): Promise<Group[]>;
-  getGroupMembers(groupId: string): Promise<GroupMember[]>;
-  createGroup(group: InsertGroup): Promise<Group>;
-  updateGroup(id: string, group: Partial<InsertGroup>): Promise<Group | undefined>;
-  deleteGroup(id: string): Promise<boolean>;
-  addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
-  removeGroupMember(id: string): Promise<boolean>;
+  // Group management has been removed
   
   // Domain management
   getDomain(id: string): Promise<Domain | undefined>;
@@ -112,8 +102,7 @@ export class MemStorage implements IStorage {
   private webhooksMap: Map<number, Webhook>;
   private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
   private metricsMap: Map<number, DnsMetric>;
-  private groupsMap: Map<number, Group>;
-  private groupMembersMap: Map<number, GroupMember>;
+  // Group maps have been removed
   
   // Counters for IDs
   private userIdCounter: number;
@@ -126,8 +115,7 @@ export class MemStorage implements IStorage {
   private webhookIdCounter: number;
   private webhookDeliveryLogIdCounter: number;
   private metricIdCounter: number;
-  private groupIdCounter: number;
-  private groupMemberIdCounter: number;
+  // Group counters have been removed
   
   public sessionStore: any;
 
@@ -322,68 +310,7 @@ export class MemStorage implements IStorage {
     return this.orgsMap.delete(parseInt(id));
   }
   
-  // Group management
-  async getGroup(id: string): Promise<Group | undefined> {
-    return this.groupsMap.get(parseInt(id));
-  }
-  
-  async getGroups(): Promise<Group[]> {
-    return Array.from(this.groupsMap.values());
-  }
-  
-  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
-    return Array.from(this.groupMembersMap.values())
-      .filter(member => member.groupId === groupId);
-  }
-  
-  async createGroup(group: InsertGroup): Promise<Group> {
-    const numId = this.groupIdCounter++;
-    const createdAt = new Date();
-    const newGroup: Group = {
-      id: numId.toString(),
-      name: group.name,
-      description: group.description || null,
-      isActive: group.isActive ?? true,
-      createdBy: group.createdBy,
-      parentGroupId: group.parentGroupId || null,
-      createdAt
-    };
-    this.groupsMap.set(numId, newGroup);
-    return newGroup;
-  }
-  
-  async updateGroup(id: string, groupData: Partial<InsertGroup>): Promise<Group | undefined> {
-    const numId = parseInt(id);
-    const group = await this.getGroup(id);
-    if (!group) return undefined;
-    
-    const updatedGroup = { ...group, ...groupData };
-    this.groupsMap.set(numId, updatedGroup);
-    return updatedGroup;
-  }
-  
-  async deleteGroup(id: string): Promise<boolean> {
-    return this.groupsMap.delete(parseInt(id));
-  }
-  
-  async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
-    const numId = this.groupMemberIdCounter++;
-    const addedAt = new Date();
-    const newMember: GroupMember = {
-      id: numId.toString(),
-      groupId: member.groupId,
-      memberId: member.memberId,
-      memberType: member.memberType,
-      addedBy: member.addedBy,
-      addedAt
-    };
-    this.groupMembersMap.set(numId, newMember);
-    return newMember;
-  }
-  
-  async removeGroupMember(id: string): Promise<boolean> {
-    return this.groupMembersMap.delete(parseInt(id));
-  }
+  // Group management methods have been removed
   
   // Domains
   async getDomain(id: string): Promise<Domain | undefined> {
