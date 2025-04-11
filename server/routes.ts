@@ -22,6 +22,90 @@ import {
   memberTypes
 } from "@shared/schema";
 import { randomBytes } from "crypto";
+import { getProviderForDomain } from './providers';
+
+// Helper function to sync DNS record with provider
+async function syncDnsRecordWithProvider(
+  action: string,
+  domainId: string,
+  recordData: any,
+  recordId?: string
+): Promise<string | null> {
+  try {
+    // Get the domain to find the provider
+    const domain = await storage.getDomain(domainId);
+    if (!domain || !domain.providerId) {
+      console.log(`No domain or provider found for domain ID: ${domainId}`);
+      return null;
+    }
+
+    // Get the provider
+    const provider = await storage.getProvider(domain.providerId);
+    if (!provider) {
+      console.log(`Provider not found with ID: ${domain.providerId}`);
+      return null;
+    }
+
+    // Initialize the provider
+    const dnsProvider = await getProviderForDomain(domain, provider);
+    if (!dnsProvider) {
+      console.log(`Failed to initialize provider ${provider.name} for domain ${domain.name}`);
+      return null;
+    }
+
+    // Get the zone ID for the domain
+    const zoneId = await dnsProvider.getZoneIdByName(domain.name);
+    if (!zoneId) {
+      console.log(`Zone not found for domain ${domain.name}`);
+      return null;
+    }
+
+    // Perform the requested action
+    let result = null;
+    switch (action) {
+      case 'create':
+        console.log(`Creating record in provider ${provider.name} for domain ${domain.name}`);
+        result = await dnsProvider.createRecord(zoneId, recordData);
+        if (result && result.id) {
+          console.log(`Record created in provider with ID: ${result.id}`);
+          return result.id;
+        }
+        break;
+      case 'update':
+        if (!recordId) {
+          console.log('Record ID is required for update operation');
+          return null;
+        }
+        console.log(`Updating record ${recordId} in provider ${provider.name} for domain ${domain.name}`);
+        result = await dnsProvider.updateRecord(zoneId, recordId, recordData);
+        if (result) {
+          console.log(`Record updated in provider: ${result.id || recordId}`);
+          return result.id || recordId;
+        }
+        break;
+      case 'delete':
+        if (!recordId) {
+          console.log('Record ID is required for delete operation');
+          return null;
+        }
+        console.log(`Deleting record ${recordId} in provider ${provider.name} for domain ${domain.name}`);
+        const success = await dnsProvider.deleteRecord(zoneId, recordId);
+        if (success) {
+          console.log(`Record deleted from provider: ${recordId}`);
+          return recordId;
+        }
+        break;
+      default:
+        console.log(`Unknown action: ${action}`);
+        return null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error syncing DNS record with provider (${action}):`, error);
+    return null;
+  }
+}
 
 // Helper function to trigger webhooks for DNS operations
 async function triggerDnsWebhooks(
