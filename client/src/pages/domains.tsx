@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainTable } from "@/components/domain/domain-table";
 import { DomainDetails } from "@/components/domain/domain-details";
 import { Domain, InsertDomain, Provider } from "@shared/schema";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -61,7 +61,7 @@ const domainFormSchema = z.object({
 
 export default function DomainsPage() {
   const { toast } = useToast();
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   
   const [isAddDomainDialogOpen, setIsAddDomainDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -70,8 +70,8 @@ export default function DomainsPage() {
 
   // Fetch domains
   const { data: domains = [], isLoading } = useQuery<Domain[]>({
-    queryKey: ["/api/domains", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+    queryKey: ["/api/domains", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
   
   // Fetch providers for the form
