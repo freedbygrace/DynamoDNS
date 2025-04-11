@@ -505,15 +505,22 @@ export class MemStorage implements IStorage {
     // Handle expiresAt
     let expiresAt = null;
     if (token.expiresAt) {
+      console.log("Processing expiresAt from token:", token.expiresAt);
       if (token.expiresAt instanceof Date) {
         expiresAt = token.expiresAt;
+        console.log("expiresAt is a Date object:", expiresAt);
       } else if (typeof token.expiresAt === 'string') {
         try {
           expiresAt = new Date(token.expiresAt);
+          console.log("Parsed expiresAt from string:", expiresAt);
         } catch (e) {
-          console.error("Failed to parse expiresAt date string:", token.expiresAt);
+          console.error("Failed to parse expiresAt date string:", token.expiresAt, e);
         }
+      } else {
+        console.error("Unexpected expiresAt type:", typeof token.expiresAt);
       }
+    } else {
+      console.log("No expiresAt provided in token data");
     }
     
     const newToken: ApiToken = { 
