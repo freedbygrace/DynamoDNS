@@ -85,7 +85,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       fullName: "",
-      organizationId: undefined,
+      customerId: undefined,
     },
   });
 
@@ -397,23 +397,23 @@ export default function AuthPage() {
                     />
                     <FormField
                       control={registerForm.control}
-                      name="organizationId"
+                      name="customerId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Organization</FormLabel>
+                          <FormLabel>Customer</FormLabel>
                           <FormControl>
                             <Select
-                              disabled={orgsLoading}
+                              disabled={customersLoading}
                               onValueChange={(value) => field.onChange(value)}
                               value={field.value || ""}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select an organization (optional)" />
+                                <SelectValue placeholder="Select a customer (optional)" />
                               </SelectTrigger>
                               <SelectContent>
-                                {organizations.map((org) => (
-                                  <SelectItem key={org.id} value={org.id.toString()}>
-                                    {org.name}
+                                {customers.map((customer) => (
+                                  <SelectItem key={customer.id} value={customer.id.toString()}>
+                                    {customer.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
