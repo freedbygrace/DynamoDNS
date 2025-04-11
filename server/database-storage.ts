@@ -432,8 +432,8 @@ export class DatabaseStorage implements IStorage {
       // Use raw SQL to select only columns that actually exist in the database
       const query = sql`
         SELECT 
-          id, domain_id, name, type, content, ttl, 
-          is_active, auto_update, notes, last_updated, created_at
+          id, domain_id, name, type, content, ttl, priority,
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at
         FROM dns_records 
         WHERE domain_id = ${domainId}
       `;
@@ -453,13 +453,14 @@ export class DatabaseStorage implements IStorage {
         type: record.type,
         content: record.content,
         ttl: record.ttl,
+        priority: record.priority,
+        providerRecordId: record.provider_record_id,
         isActive: record.is_active,
         isAutoIP: record.auto_update, // Map auto_update to isAutoIP
         notes: record.notes,
         lastUpdated: record.last_updated,
         createdAt: record.created_at,
-        proxied: null, // Add missing fields with null values
-        providerId: null
+        proxied: null // Add missing field for frontend compatibility
       }));
     } catch (error) {
       console.error("Error in getDnsRecordsByDomain:", error);
@@ -539,8 +540,8 @@ export class DatabaseStorage implements IStorage {
           UPDATE dns_records 
           SET last_updated = ${new Date()}
           WHERE id = ${id}
-          RETURNING id, domain_id, name, type, content, ttl, 
-            is_active, auto_update, notes, last_updated, created_at
+          RETURNING id, domain_id, name, type, content, ttl, priority,
+            provider_record_id, is_active, auto_update, notes, last_updated, created_at
         `;
         
         const updateResult = await db.execute(updateQuery);
@@ -557,13 +558,14 @@ export class DatabaseStorage implements IStorage {
           type: record.type,
           content: record.content,
           ttl: record.ttl,
+          priority: record.priority,
+          providerRecordId: record.provider_record_id,
           isActive: record.is_active,
           isAutoIP: record.auto_update,
           notes: record.notes,
           lastUpdated: record.last_updated,
           createdAt: record.created_at,
-          proxied: null,
-          providerId: null
+          proxied: null // Maintained for frontend compatibility
         };
       }
       
@@ -599,8 +601,8 @@ export class DatabaseStorage implements IStorage {
       
       // Add WHERE and RETURNING
       sqlQuery = sql`${sqlQuery} WHERE id = ${id}
-        RETURNING id, domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated, created_at`;
+        RETURNING id, domain_id, name, type, content, ttl, priority,
+        provider_record_id, is_active, auto_update, notes, last_updated, created_at`;
       
       // Execute the query
       const result = await db.execute(sqlQuery);
@@ -618,13 +620,14 @@ export class DatabaseStorage implements IStorage {
         type: updatedRecord.type,
         content: updatedRecord.content,
         ttl: updatedRecord.ttl,
+        priority: updatedRecord.priority,
+        providerRecordId: updatedRecord.provider_record_id,
         isActive: updatedRecord.is_active,
         isAutoIP: updatedRecord.auto_update,
         notes: updatedRecord.notes,
         lastUpdated: updatedRecord.last_updated,
         createdAt: updatedRecord.created_at,
-        proxied: null,
-        providerId: null
+        proxied: null // Maintained for frontend compatibility
       };
     } catch (error) {
       console.error("Error in updateDnsRecord:", error);
