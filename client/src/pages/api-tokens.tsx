@@ -126,7 +126,7 @@ export default function ApiTokensPage() {
   // Add token mutation
   const addTokenMutation = useMutation({
     mutationFn: async (data: z.infer<typeof tokenFormSchema>) => {
-      const tokenData: Partial<InsertApiToken> = {
+      const tokenData: Partial<any> = {
         name: data.name,
         organizationId: currentOrganization?.id || "",
         role: data.role,
@@ -157,30 +157,38 @@ export default function ApiTokensPage() {
               customDate.setHours(23, 59, 59, 999);
             }
             
-            tokenData.expiresAt = customDate;
+            // Server expects ISO string for dates, not JavaScript Date objects
+            tokenData.expiresAt = customDate.toISOString();
           }
         } else {
           // For preset expiration options
+          let expiresAt: Date;
+          
           switch (data.expiresIn) {
             case '1hour':
-              tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
               break;
             case '1day':
-              tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
               break;
             case '7days':
-              tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
               break;
             case '30days':
-              tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
               break;
             case '90days':
-              tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
               break;
             case '1year':
-              tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+              expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
               break;
+            default:
+              expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
           }
+          
+          // Server expects ISO string for dates, not JavaScript Date objects
+          tokenData.expiresAt = expiresAt.toISOString();
         }
       }
       

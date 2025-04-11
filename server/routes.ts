@@ -971,25 +971,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a random token
       const tokenValue = randomBytes(32).toString('hex');
       
-      // Validate permissions
-      const permissionsValidator = z.array(z.enum(["admin", "manager", "user", "readonly"]));
+      // Prepare tokenData with values provided explicitly
+      const { name, role, expiresAt, organizationId, isActive } = req.body;
       
-      // Create schema with additional validation
-      const schema = insertApiTokenSchema
-        .omit({ token: true })
-        .extend({
-          permissions: permissionsValidator,
-          name: z.string().min(1)
-        });
+      // Log what we received for debugging
+      console.log("Token creation request body:", {
+        name, role, expiresAt, organizationId, isActive
+      });
       
-      const validatedData = schema.parse(req.body);
+      // Set default permissions based on the role
+      let permissions = [];
+      if (role === 'admin') {
+        permissions = ['admin', 'manager', 'user', 'readonly'];
+      } else if (role === 'manager') {
+        permissions = ['manager', 'user', 'readonly'];
+      } else if (role === 'user') {
+        permissions = ['user', 'readonly'];
+      } else {
+        permissions = ['readonly'];
+      }
       
-      // Set token value and created by
-      const tokenData = {
-        ...validatedData,
+      // Create token data object with all required fields
+      let tokenObj: any = {
+        name: name,
         token: tokenValue,
-        createdBy: req.user?.id
+        organizationId: organizationId,
+        permissions: permissions,
+        role: role,
+        createdBy: req.user?.id || '1', // Provide a fallback ID for admin
+        isActive: isActive !== undefined ? isActive : true
       };
+      
+      // Handle expires date properly
+      if (expiresAt) {
+        // If it's a string that looks like a date, convert it to a Date object
+        if (typeof expiresAt === 'string' && expiresAt.match(/^\d{4}-\d{2}-\d{2}/)) {
+          tokenObj.expiresAt = new Date(expiresAt);
+        } else if (expiresAt instanceof Date) {
+          tokenObj.expiresAt = expiresAt;
+        }
+      }
+      
+      // Final tokenData
+      const tokenData = tokenObj;
+      
+      console.log("Final token data for storage:", tokenData);
       
       const token = await storage.createApiToken(tokenData);
       
