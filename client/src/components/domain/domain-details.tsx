@@ -430,6 +430,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Content</TableHead>
+                  <TableHead>AutoIP</TableHead>
                   <TableHead>TTL</TableHead>
                   <TableHead>Last Update</TableHead>
                   <TableHead>Status</TableHead>
