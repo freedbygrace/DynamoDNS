@@ -953,13 +953,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : [];
       }
       
-      // Mask token values
-      const maskedTokens = tokens.map(token => ({
-        ...token,
-        token: token.token.substring(0, 8) + '...'
-      }));
-      
-      res.json(maskedTokens);
+      // Return full tokens (client will handle masking for display)
+      res.json(tokens);
     } catch (error) {
       console.error("Error fetching API tokens:", error);
       res.status(500).json({ message: "Internal server error" });
