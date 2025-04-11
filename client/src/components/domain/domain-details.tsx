@@ -156,7 +156,25 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
         providerId: domain.providerId
       };
       
+      console.log("Adding record:", recordData);
+      
+      // Check if there are duplicate records before adding
+      const potentialDuplicate = records.find(r => 
+        r.name === recordData.name && 
+        r.type === recordData.type
+      );
+      
+      if (potentialDuplicate) {
+        throw new Error(`A record with name "${recordData.name}" and type "${recordData.type}" already exists. Please use a different name or type.`);
+      }
+      
       const res = await apiRequest("POST", "/api/dns-records", recordData);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to add record");
+      }
+      
       return await res.json();
     },
     onSuccess: () => {
@@ -169,9 +187,10 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       });
     },
     onError: (error) => {
+      console.error("Add record error:", error);
       toast({
         title: "Failed to add record",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
@@ -185,10 +204,24 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       // Always use domain's provider for the record
       const updatedData = {
         ...updateData,
-        providerId: domain.providerId
+        domainId: domain.id, // Make sure domainId is included
+        providerId: domain.providerId // Always use domain's provider
       };
       
       console.log("Updating record:", id, "with data:", updatedData);
+      
+      // Check if there are duplicate records before updating
+      // We do this by matching against name and type but excluding the current record
+      const potentialDuplicate = records.find(r => 
+        r.name === updatedData.name && 
+        r.type === updatedData.type && 
+        r.id !== id
+      );
+      
+      if (potentialDuplicate) {
+        throw new Error(`A record with name "${updatedData.name}" and type "${updatedData.type}" already exists. Please use a different name or type.`);
+      }
+      
       const res = await apiRequest("PUT", `/api/dns-records/${id}`, updatedData);
       
       if (!res.ok) {
@@ -281,6 +314,43 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
     if (selectedRecord) {
       deleteRecordMutation.mutate(selectedRecord.id);
     }
+  };
+  
+  // Toggle active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      console.log("Toggling record active status:", id, "to", isActive);
+      const res = await apiRequest("PATCH", `/api/dns-records/${id}`, {
+        isActive
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update record status");
+      }
+      
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dns-records", domain.id] });
+      toast({
+        title: "Record status updated",
+        description: "The DNS record status has been successfully updated.",
+      });
+    },
+    onError: (error) => {
+      console.error("Toggle active status error:", error);
+      toast({
+        title: "Failed to update record status",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle toggle active
+  const handleToggleActive = (record: DnsRecord, checked: boolean) => {
+    toggleActiveMutation.mutate({ id: record.id, isActive: checked });
   };
 
   // Get a human-readable provider name from the provider ID
