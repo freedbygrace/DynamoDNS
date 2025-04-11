@@ -460,68 +460,65 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       <Badge variant="outline">{record.type}</Badge>
                     </TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="truncate max-w-[150px] inline-block">
-                              {record.isAutoIP 
-                                ? "Auto-managed" 
-                                : record.content}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {record.isAutoIP 
-                                ? "Content automatically managed by AutoIP" 
-                                : record.content}
-                            </p>
-                            {record.notes && (
-                              <>
-                                <div className="border-t my-1"></div>
-                                <p className="italic text-xs">{record.notes}</p>
-                              </>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {record.isAutoIP ? (
+                        record.currentIp ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-7 px-2 text-xs font-mono"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(record.currentIp || '');
+                                    toast({
+                                      title: "IP copied to clipboard",
+                                      description: record.currentIp,
+                                      duration: 2000
+                                    });
+                                  }}
+                                >
+                                  <span className="flex items-center gap-1">
+                                    {record.currentIp.substring(0, 12)}...
+                                    <Copy className="h-3 w-3" />
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono">{record.currentIp}</p>
+                                <p className="text-xs mt-1">Click to copy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Resolving IP...</span>
+                        )
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="truncate max-w-[150px] inline-block">
+                                {record.content}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{record.content}</p>
+                              {record.notes && (
+                                <>
+                                  <div className="border-t my-1"></div>
+                                  <p className="italic text-xs">{record.notes}</p>
+                                </>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </TableCell>
                     <TableCell>
                       {record.isAutoIP ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                            Enabled
-                          </Badge>
-                          {record.currentIp && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-7 px-2 text-xs font-mono"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(record.currentIp || '');
-                                      toast({
-                                        title: "IP copied to clipboard",
-                                        description: record.currentIp,
-                                        duration: 2000
-                                      });
-                                    }}
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      {record.currentIp.substring(0, 10)}...
-                                      <Copy className="h-3 w-3" />
-                                    </span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-mono">{record.currentIp}</p>
-                                  <p className="text-xs mt-1">Click to copy</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                          Enabled
+                        </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
                           Disabled
