@@ -172,14 +172,14 @@ export class MemStorage implements IStorage {
       credentials: { apiKey: process.env.CLOUDFLARE_API_KEY || "" },
       isActive: true
     };
-    this.createProvider(cloudflareProvider);
+    // Use synchronous creation to avoid promise issues
+    const provider = this.createProviderSync(cloudflareProvider);
     
     // Create sample organization
     const defaultOrg: InsertOrganization = {
       name: "Default Organization",
       isActive: true
     };
-    const organization = this.createOrganization(defaultOrg);
     
     // Create a sample admin user with fixed ID to properly reference it
     let adminUser: User;
@@ -187,6 +187,9 @@ export class MemStorage implements IStorage {
     if (existingAdmin) {
       adminUser = existingAdmin;
     } else {
+      // Create organization synchronously to get its ID directly
+      const org = this.createOrganizationSync(defaultOrg);
+      
       adminUser = {
         id: "1",
         username: "admin",
@@ -194,7 +197,7 @@ export class MemStorage implements IStorage {
         email: "admin@example.com",
         fullName: "System Admin",
         role: "admin",
-        organizationId: organization.id,
+        organizationId: org.id,
         createdAt: new Date()
       };
       this.usersMap.set(1, adminUser);
@@ -288,6 +291,20 @@ export class MemStorage implements IStorage {
     return this.orgsMap.delete(parseInt(id));
   }
   
+  // Synchronous version of createOrganization for use in initialization
+  createOrganizationSync(org: InsertOrganization): Organization {
+    const numId = this.orgIdCounter++;
+    const createdAt = new Date();
+    const newOrg: Organization = {
+      id: numId.toString(),
+      name: org.name,
+      isActive: org.isActive ?? true,
+      createdAt
+    };
+    this.orgsMap.set(numId, newOrg);
+    return newOrg;
+  }
+  
   // Group management methods have been removed
   
   // Domains
@@ -311,8 +328,8 @@ export class MemStorage implements IStorage {
     const newDomain: Domain = { 
       id: numId.toString(),
       name: domain.name,
-      organizationId: domain.organizationId,
-      providerId: domain.providerId,
+      organizationId: domain.organizationId!,
+      providerId: domain.providerId || "1", // Default to the first provider if not specified
       isActive: domain.isActive ?? true,
       lastUpdated,
       createdAt
@@ -364,6 +381,8 @@ export class MemStorage implements IStorage {
       isActive: record.isActive ?? true,
       isAutoIP: record.isAutoIP ?? false,
       notes: record.notes ?? null,
+      priority: record.priority ?? 0,
+      providerRecordId: record.providerRecordId ?? null,
       lastUpdated,
       createdAt
     };
@@ -425,6 +444,22 @@ export class MemStorage implements IStorage {
   
   async deleteProvider(id: string): Promise<boolean> {
     return this.providersMap.delete(parseInt(id));
+  }
+  
+  // Synchronous version of createProvider for use in initialization
+  createProviderSync(provider: InsertProvider): Provider {
+    const numId = this.providerIdCounter++;
+    const createdAt = new Date();
+    const newProvider: Provider = { 
+      id: numId.toString(),
+      name: provider.name,
+      type: provider.type,
+      credentials: provider.credentials ?? null,
+      isActive: provider.isActive ?? true,
+      createdAt 
+    };
+    this.providersMap.set(numId, newProvider);
+    return newProvider;
   }
   
   // API Tokens
@@ -807,4 +842,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
