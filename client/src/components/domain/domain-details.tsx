@@ -188,7 +188,14 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
         providerId: domain.providerId
       };
       
+      console.log("Updating record:", id, "with data:", updatedData);
       const res = await apiRequest("PUT", `/api/dns-records/${id}`, updatedData);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update record");
+      }
+      
       return await res.json();
     },
     onSuccess: () => {
@@ -201,9 +208,10 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
       });
     },
     onError: (error) => {
+      console.error("Update record error:", error);
       toast({
         title: "Failed to update record",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     },
@@ -345,7 +353,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                   <TableHead>Type</TableHead>
                   <TableHead>Content</TableHead>
                   <TableHead>TTL</TableHead>
-                  <TableHead>Provider</TableHead>
                   <TableHead>Last Update</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -394,7 +401,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       </TooltipProvider>
                     </TableCell>
                     <TableCell>{record.ttl}s</TableCell>
-                    <TableCell>{getProviderName(record.providerId)}</TableCell>
                     <TableCell>
                       {record.lastUpdated 
                         ? formatDistanceToNow(new Date(record.lastUpdated), { addSuffix: true }) 
@@ -409,6 +415,20 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Switch
+                                checked={record.isActive}
+                                onCheckedChange={(checked) => handleToggleActive(record, checked)}
+                                className="mx-2"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{record.isActive ? "Disable" : "Enable"} record</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button 
                           variant="ghost" 
                           size="icon"
