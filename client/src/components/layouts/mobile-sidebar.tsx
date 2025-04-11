@@ -36,8 +36,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       icon: <LayoutDashboard className="w-5 h-5 mr-3" />,
     },
     {
-      title: "Organizations",
-      href: "/organizations",
+      title: "Customers",
+      href: "/customers",
       icon: <Users className="w-5 h-5 mr-3" />,
     },
     {
