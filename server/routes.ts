@@ -108,7 +108,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dns-records", requireRole(["admin", "manager"]), async (req, res) => {
     try {
+      console.log("Creating DNS record with request body:", JSON.stringify(req.body));
+      
+      // Validate the request data
       const validatedData = insertDnsRecordSchema.parse(req.body);
+      console.log("Data after validation:", JSON.stringify(validatedData));
       
       // Convert "none" to null for providerId if present
       if (validatedData.providerId === "none") {
@@ -120,11 +124,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const domain = await storage.getDomain(validatedData.domainId);
         if (domain) {
           validatedData.providerId = domain.providerId;
+          console.log(`Setting providerId from domain: ${domain.providerId}`);
+        } else {
+          console.log(`Domain not found: ${validatedData.domainId}`);
         }
       }
       
+      // Make sure content is never undefined or null for non-AUTO records
+      if (!validatedData.isAutoIP && (!validatedData.content || validatedData.content.trim() === '')) {
+        validatedData.content = '';
+        console.log("Setting empty content for non-AUTO record");
+      }
+      
       try {
+        console.log("Calling storage.createDnsRecord with:", JSON.stringify(validatedData));
         const record = await storage.createDnsRecord(validatedData);
+        console.log("DNS record created successfully:", JSON.stringify(record));
         
         // Track history
         await storage.addDnsHistory(
@@ -140,15 +155,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.status(201).json(record);
       } catch (error) {
-        console.error("Error creating DNS record:", error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("Error creating DNS record in storage:", error);
+        res.status(500).json({ 
+          message: "Failed to create DNS record", 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
-        console.error("Error creating DNS record:", error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("Unexpected error creating DNS record:", error);
+        res.status(500).json({ 
+          message: "Internal server error", 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     }
   });

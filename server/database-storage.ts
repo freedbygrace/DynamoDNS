@@ -470,61 +470,106 @@ export class DatabaseStorage implements IStorage {
 
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
     try {
-      console.log("Creating DNS record with data:", record);
+      console.log("Creating DNS record with data:", JSON.stringify(record, null, 2));
       
-      // Convert snake_case field names for database compatibility
-      // We don't need providerId as it's not in the db table
-      const { proxied, isAutoIP, providerId, ...validFields } = record as any;
-      
-      // Create SQL query with proper parameterization using SQL template literals
-      const queryText = sql`
-        INSERT INTO dns_records (
-          domain_id, name, type, content, ttl, priority,
-          is_active, auto_update, notes, last_updated, provider_record_id
-        ) VALUES (
-          ${validFields.domainId},
-          ${validFields.name},
-          ${validFields.type},
-          ${validFields.content || ''},
-          ${validFields.ttl || 3600},
-          ${validFields.priority || 0},
-          ${validFields.isActive !== undefined ? validFields.isActive : true},
-          ${isAutoIP !== undefined ? isAutoIP : false},
-          ${validFields.notes || null},
-          ${new Date()},
-          ${validFields.providerRecordId || null}
-        ) 
-        RETURNING *
-      `;
-      
-      // Execute the query directly with SQL template literal
-      const result = await db.execute(queryText);
-      
-      if (!Array.isArray(result) || result.length === 0) {
-        console.error("DNS record creation failed - empty result returned");
-        throw new Error("Failed to create DNS record");
-      }
-      
-      const newRecord = result[0];
-      console.log("New DNS record created:", newRecord);
-      
-      // Return the record with frontend-expected field names
-      return {
-        id: newRecord.id,
-        domainId: newRecord.domain_id,
-        name: newRecord.name,
-        type: newRecord.type,
-        content: newRecord.content,
-        ttl: newRecord.ttl,
-        priority: newRecord.priority,
-        isActive: newRecord.is_active,
-        isAutoIP: newRecord.auto_update, // Map auto_update to isAutoIP
-        notes: newRecord.notes,
-        lastUpdated: newRecord.last_updated,
-        createdAt: newRecord.created_at,
-        providerRecordId: newRecord.provider_record_id,
-        proxied: null // Maintained for frontend compatibility
+      // Try a simpler approach using drizzle API directly
+      // We need to map the properties to match the database column names
+      const recordData = {
+        domain_id: record.domainId,
+        name: record.name,
+        type: record.type,
+        content: record.content || '',
+        ttl: record.ttl || 3600,
+        priority: record.priority || 0,
+        is_active: record.isActive !== undefined ? record.isActive : true,
+        auto_update: record.isAutoIP !== undefined ? record.isAutoIP : false,
+        notes: record.notes || null,
+        last_updated: new Date(),
+        provider_record_id: record.providerRecordId || null
       };
+      
+      console.log("Inserting DNS record with:", JSON.stringify(recordData, null, 2));
+      
+      try {
+        // Insert using the drizzle query builder
+        const [newRecord] = await db.insert(dnsRecords)
+          .values(recordData)
+          .returning();
+          
+        console.log("New DNS record created:", JSON.stringify(newRecord, null, 2));
+        
+        // Convert from DB schema to application schema
+        return {
+          id: newRecord.id,
+          domainId: newRecord.domainId,
+          name: newRecord.name,
+          type: newRecord.type,
+          content: newRecord.content,
+          ttl: newRecord.ttl,
+          priority: newRecord.priority,
+          isActive: newRecord.isActive,
+          isAutoIP: newRecord.isAutoIP,
+          notes: newRecord.notes,
+          lastUpdated: newRecord.lastUpdated,
+          createdAt: newRecord.createdAt,
+          providerRecordId: newRecord.providerRecordId,
+          proxied: null // For frontend compatibility
+        };
+      } catch (drizzleError) {
+        console.error("Drizzle error creating DNS record:", drizzleError);
+        
+        // Fallback to SQL approach if drizzle approach fails
+        console.log("Falling back to SQL approach");
+        
+        const queryText = sql`
+          INSERT INTO dns_records (
+            domain_id, name, type, content, ttl, priority,
+            is_active, auto_update, notes, last_updated, provider_record_id
+          ) VALUES (
+            ${record.domainId},
+            ${record.name},
+            ${record.type},
+            ${record.content || ''},
+            ${record.ttl || 3600},
+            ${record.priority || 0},
+            ${record.isActive !== undefined ? record.isActive : true},
+            ${record.isAutoIP !== undefined ? record.isAutoIP : false},
+            ${record.notes || null},
+            ${new Date()},
+            ${record.providerRecordId || null}
+          ) 
+          RETURNING *
+        `;
+        
+        // Execute the query directly with SQL template literal
+        const result = await db.execute(queryText);
+        
+        if (!Array.isArray(result) || result.length === 0) {
+          console.error("DNS record creation failed - empty result returned");
+          throw new Error("Failed to create DNS record");
+        }
+        
+        const sqlRecord = result[0];
+        console.log("New DNS record created with SQL:", sqlRecord);
+        
+        // Map the SQL result to the expected DnsRecord type
+        return {
+          id: sqlRecord.id,
+          domainId: sqlRecord.domain_id,
+          name: sqlRecord.name,
+          type: sqlRecord.type,
+          content: sqlRecord.content,
+          ttl: sqlRecord.ttl,
+          priority: sqlRecord.priority,
+          isActive: sqlRecord.is_active,
+          isAutoIP: sqlRecord.auto_update,
+          notes: sqlRecord.notes,
+          lastUpdated: sqlRecord.last_updated,
+          createdAt: sqlRecord.created_at,
+          providerRecordId: sqlRecord.provider_record_id,
+          proxied: null // For frontend compatibility
+        };
+      }
     } catch (error) {
       console.error("Error in createDnsRecord:", error);
       throw error;
