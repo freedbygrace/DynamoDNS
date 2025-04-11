@@ -97,7 +97,7 @@ export default function ApiTokensPage() {
   
   // Fetch custom roles
   const { data: customRoles = [] } = useQuery<CustomRole[]>({
-    queryKey: ["/api/custom-roles"],
+    queryKey: ["/api/roles/custom"],
   });
 
   // Form for adding a token
