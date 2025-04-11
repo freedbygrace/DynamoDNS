@@ -463,11 +463,21 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="truncate max-w-[150px] inline-block">
-                              {record.isAutoIP ? "Auto IP" : record.content}
+                              {record.isAutoIP 
+                                ? (record.currentIp 
+                                  ? `Auto IP (${record.currentIp})` 
+                                  : "Auto IP") 
+                                : record.content}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{record.isAutoIP ? "Auto IP" : record.content}</p>
+                            <p>
+                              {record.isAutoIP 
+                                ? (record.currentIp 
+                                  ? <>Auto IP - Current value: <strong>{record.currentIp}</strong></> 
+                                  : "Auto IP - Resolving current IP...")
+                                : record.content}
+                            </p>
                             {record.notes && (
                               <>
                                 <div className="border-t my-1"></div>
