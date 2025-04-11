@@ -1157,6 +1157,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  // PATCH endpoint for API tokens (for status changes like revocation)
+  app.patch("/api/api-tokens/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Get the token
+      const token = await storage.getApiToken(id);
+      
+      if (!token) {
+        return res.status(404).json({ message: "API token not found" });
+      }
+      
+      // Verify permission: only admin can modify any token, managers can only modify their org's tokens
+      if (req.user?.role !== "admin" && token.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+      
+      // For PATCH, we'll allow a simpler validation specifically for isActive status changes
+      const schema = z.object({
+        isActive: z.boolean().optional(),
+        name: z.string().min(1).optional(),
+        role: z.string().optional(),
+      });
+      
+      const validatedData = schema.parse(req.body);
+      console.log(`PATCH token ${id}:`, validatedData);
+      
+      const updatedToken = await storage.updateApiToken(id.toString(), validatedData);
+      
+      if (!updatedToken) {
+        return res.status(404).json({ message: "API token not found" });
+      }
+      
+      // Mask token in response
+      const maskedToken = {
+        ...updatedToken,
+        token: "*".repeat(16) // Use asterisks for token masking
+      };
+      
+      res.json(maskedToken);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        console.error("Error updating API token status:", error);
+        res.status(500).json({ message: "Internal server error", error: error.message });
+      }
+    }
+  });
 
   app.delete("/api/api-tokens/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
