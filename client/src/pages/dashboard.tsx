@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Domain, DnsRecord, Provider, Organization } from "@shared/schema";
+import { Domain, DnsRecord, Provider, Customer } from "@shared/schema";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { DomainStatusCard } from "@/components/domain/domain-status-card";
 import { DomainTable } from "@/components/domain/domain-table";
@@ -8,19 +8,19 @@ import { PublicIpCard } from "@/components/shared/public-ip-card";
 import { DnsUpdateChart } from "@/components/charts/dns-update-chart";
 import { ProviderDistributionChart } from "@/components/charts/provider-distribution-chart";
 import { RecordTypeChart } from "@/components/charts/record-type-chart";
-import { OrganizationListCard } from "@/components/organization/organization-list-card";
+import { CustomerListCard } from "@/components/customer/customer-list-card";
 import { Button } from "@/components/ui/button";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { Home, CheckCircle, AlertTriangle, AlertCircle, Plus, Wrench, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export default function DashboardPage() {
-  const { currentOrganization, organizations } = useOrganization();
+  const { currentCustomer, customers } = useCustomer();
 
   // Fetch domains, DNS records, and providers
   const { data: domains = [] } = useQuery<Domain[]>({
-    queryKey: ["/api/domains", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+    queryKey: ["/api/domains", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
 
   const { data: allRecords = [] } = useQuery<DnsRecord[]>({
@@ -93,9 +93,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Organizations List */}
+      {/* Customers List */}
       <div className="mb-8">
-        <OrganizationListCard organizations={organizations} />
+        <CustomerListCard customers={customers} />
       </div>
 
       {/* Domain Status Table */}
