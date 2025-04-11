@@ -56,6 +56,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -113,9 +114,12 @@ export default function ApiTokensPage() {
   
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [isViewTokenDialogOpen, setIsViewTokenDialogOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<ApiToken | null>(null);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [showTokenDialog, setShowTokenDialog] = useState(false);
+  const [viewingFullToken, setViewingFullToken] = useState(false);
   
   // Fetch API tokens
   const { data: tokens = [], isLoading } = useQuery<ApiToken[]>({
@@ -216,6 +220,29 @@ export default function ApiTokensPage() {
       });
     },
   });
+  
+  // Revoke token mutation
+  const revokeTokenMutation = useMutation({
+    mutationFn: async (tokenId: string) => {
+      await apiRequest("PATCH", `/api/api-tokens/${tokenId}`, { isActive: false });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentOrganization?.id] });
+      setIsRevokeDialogOpen(false);
+      setSelectedToken(null);
+      toast({
+        title: "Token revoked",
+        description: "The API token has been successfully revoked.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to revoke token",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Form submission handler
   const onSubmit = (data: z.infer<typeof tokenFormSchema>) => {
@@ -226,6 +253,30 @@ export default function ApiTokensPage() {
   const handleDeleteToken = (token: ApiToken) => {
     setSelectedToken(token);
     setIsDeleteDialogOpen(true);
+  };
+  
+  // Handle token revocation
+  const handleRevokeToken = (token: ApiToken) => {
+    setSelectedToken(token);
+    setIsRevokeDialogOpen(true);
+  };
+  
+  // Handle viewing token
+  const handleViewToken = (token: ApiToken) => {
+    setSelectedToken(token);
+    setViewingFullToken(false);
+    setIsViewTokenDialogOpen(true);
+  };
+  
+  // Copy selected token to clipboard
+  const copySelectedTokenToClipboard = () => {
+    if (selectedToken) {
+      navigator.clipboard.writeText(selectedToken.token);
+      toast({
+        title: "Token copied",
+        description: "The API token has been copied to your clipboard.",
+      });
+    }
   };
 
   // Copy token to clipboard
@@ -335,6 +386,18 @@ export default function ApiTokensPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleViewToken(token)}
+                          >
+                            View Token
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRevokeToken(token)}
+                            disabled={!token.isActive}
+                          >
+                            Revoke Token
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => handleDeleteToken(token)}
                             className="text-destructive focus:text-destructive"
@@ -606,9 +669,9 @@ export default function ApiTokensPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revoke API Token</AlertDialogTitle>
+            <AlertDialogTitle>Delete API Token</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently revoke the API token <strong>{selectedToken?.name}</strong>. 
+              This will permanently delete the API token <strong>{selectedToken?.name}</strong>. 
               Any applications using this token will no longer be able to access the API.
               This action cannot be undone.
             </AlertDialogDescription>
@@ -623,6 +686,37 @@ export default function ApiTokensPage() {
               {deleteTokenMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Token"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Revoke Confirmation Dialog */}
+      <AlertDialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke API Token</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will revoke the API token <strong>{selectedToken?.name}</strong>. 
+              Any applications using this token will no longer be able to access the API.
+              You can still view the token, but it cannot be used for authentication.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => selectedToken && revokeTokenMutation.mutate(selectedToken.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={revokeTokenMutation.isPending}
+            >
+              {revokeTokenMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Revoking...
                 </>
               ) : (
@@ -632,6 +726,95 @@ export default function ApiTokensPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* View Token Dialog */}
+      <Dialog open={isViewTokenDialogOpen} onOpenChange={setIsViewTokenDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>View API Token</DialogTitle>
+            <DialogDescription>
+              API token details for <strong>{selectedToken?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedToken && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Name</h4>
+                  <p className="text-sm">{selectedToken.name}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Role</h4>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedToken.role || "readonly"}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Status</h4>
+                  {selectedToken.isActive ? (
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-muted/10 text-muted-foreground">
+                      Inactive
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Expires</h4>
+                  {selectedToken.expiresAt ? (
+                    <p className="text-sm">{format(new Date(selectedToken.expiresAt), 'PPpp')}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Never</p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <h4 className="text-sm font-medium">Token</h4>
+                  <Button variant="ghost" size="sm" onClick={() => setViewingFullToken(!viewingFullToken)}>
+                    {viewingFullToken ? "Hide" : "Show"}
+                  </Button>
+                </div>
+                <div className="bg-muted p-4 rounded-md relative">
+                  <div className="font-mono text-sm break-all">
+                    {viewingFullToken ? selectedToken.token : (
+                      selectedToken.token.substring(0, 8) + '...' + selectedToken.token.substring(selectedToken.token.length - 8)
+                    )}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-2 right-2" 
+                    onClick={copySelectedTokenToClipboard}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-start mt-2 p-4 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 rounded-md">
+                <Info className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <strong>Security note:</strong> Keep this token secure. It provides access to your account based on the {selectedToken.role} role.
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button onClick={() => setIsViewTokenDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
