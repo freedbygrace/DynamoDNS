@@ -147,7 +147,7 @@ export class ImprovedDatabaseStorage implements IStorage {
     const customer = await this.createCustomer(defaultCustomer);
     
     // Create admin user with proper password hashing
-    const adminPassword = await hashPassword("password");
+    const adminPassword = await hashPassword("admin123");
     
     const adminUser: InsertUser = {
       username: "admin",
