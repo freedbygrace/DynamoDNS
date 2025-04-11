@@ -27,22 +27,22 @@ export function PublicIpCard() {
       try {
         setLoading(true);
 
-        // Fetch IPv4
-        const ipv4Response = await fetch('https://api.ipify.org?format=json')
+        // Use our server-side endpoint that handles Replit's environment properly
+        const response = await fetch('/api/public-ip')
           .then(res => res.json())
-          .catch(() => ({ ip: null }));
+          .catch((err) => {
+            console.error('Error fetching from server endpoint:', err);
+            return { ipv4: null, ipv6: null };
+          });
 
-        // Fetch IPv6 (might not be available for all users)
-        const ipv6Response = await fetch('https://api64.ipify.org?format=json')
-          .then(res => res.json())
-          .catch(() => ({ ip: null }));
-
-        setIpv4(ipv4Response.ip);
+        console.log('Server returned IP data:', response);
         
-        // Validate that the IPv6 response is actually an IPv6 address
-        const ipv6Address = ipv6Response.ip;
-        if (isValidIPv6(ipv6Address)) {
-          setIpv6(ipv6Address);
+        // Set the IPv4 address
+        setIpv4(response.ipv4);
+        
+        // Validate and set the IPv6 address if present
+        if (isValidIPv6(response.ipv6)) {
+          setIpv6(response.ipv6);
         } else {
           setIpv6(null); // Not a valid IPv6 address
         }
