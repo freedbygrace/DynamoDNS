@@ -386,172 +386,223 @@ export class DatabaseStorage implements IStorage {
 
   // DNS Record management
   async getDnsRecord(id: string): Promise<DnsRecord | undefined> {
-    // Use raw SQL to select only columns that actually exist in the database
-    const query = `
-      SELECT 
-        id, domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated, created_at
-      FROM dns_records 
-      WHERE id = $1
-    `;
-    
-    const result = await db.execute(query, [id]);
-    
-    if (!result || result.length === 0) {
+    try {
+      // Use raw SQL to select only columns that actually exist in the database
+      const query = sql`
+        SELECT 
+          id, domain_id, name, type, content, ttl, 
+          is_active, auto_update, notes, last_updated, created_at
+        FROM dns_records 
+        WHERE id = ${id}
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!Array.isArray(result) || result.length === 0) {
+        return undefined;
+      }
+      
+      const record = result[0];
+      
+      // Map the result to match our schema expectations
+      return {
+        id: record.id,
+        domainId: record.domain_id,
+        name: record.name,
+        type: record.type,
+        content: record.content,
+        ttl: record.ttl,
+        isActive: record.is_active,
+        isAutoIP: record.auto_update, // Map auto_update to isAutoIP
+        notes: record.notes,
+        lastUpdated: record.last_updated,
+        createdAt: record.created_at,
+        proxied: null, // Add missing fields with null values
+        providerId: null
+      };
+    } catch (error) {
+      console.error("Error in getDnsRecord:", error);
       return undefined;
     }
-    
-    const record = result[0];
-    
-    // Map the result to match our schema expectations
-    return {
-      id: record.id,
-      domainId: record.domain_id,
-      name: record.name,
-      type: record.type,
-      content: record.content,
-      ttl: record.ttl,
-      isActive: record.is_active,
-      isAutoIP: record.auto_update, // Map auto_update to isAutoIP
-      notes: record.notes,
-      lastUpdated: record.last_updated,
-      createdAt: record.created_at,
-      proxied: null, // Add missing fields with null values
-      providerId: null
-    };
   }
 
   async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
-    // Use raw SQL to select only columns that actually exist in the database
-    const query = `
-      SELECT 
-        id, domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated, created_at
-      FROM dns_records 
-      WHERE domain_id = $1
-    `;
-    
-    const result = await db.execute(query, [domainId]);
-    
-    // Map the results to match our schema expectations
-    return result.map(record => ({
-      id: record.id,
-      domainId: record.domain_id,
-      name: record.name,
-      type: record.type,
-      content: record.content,
-      ttl: record.ttl,
-      isActive: record.is_active,
-      isAutoIP: record.auto_update, // Map auto_update to isAutoIP
-      notes: record.notes,
-      lastUpdated: record.last_updated,
-      createdAt: record.created_at,
-      proxied: null, // Add missing fields with null values
-      providerId: null
-    }));
+    try {
+      // Use raw SQL to select only columns that actually exist in the database
+      const query = sql`
+        SELECT 
+          id, domain_id, name, type, content, ttl, 
+          is_active, auto_update, notes, last_updated, created_at
+        FROM dns_records 
+        WHERE domain_id = ${domainId}
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!Array.isArray(result)) {
+        console.log("Unexpected result format:", result);
+        return [];
+      }
+      
+      // Map the results to match our schema expectations
+      return result.map(record => ({
+        id: record.id,
+        domainId: record.domain_id,
+        name: record.name,
+        type: record.type,
+        content: record.content,
+        ttl: record.ttl,
+        isActive: record.is_active,
+        isAutoIP: record.auto_update, // Map auto_update to isAutoIP
+        notes: record.notes,
+        lastUpdated: record.last_updated,
+        createdAt: record.created_at,
+        proxied: null, // Add missing fields with null values
+        providerId: null
+      }));
+    } catch (error) {
+      console.error("Error in getDnsRecordsByDomain:", error);
+      return [];
+    }
   }
 
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
-    // Convert snake_case field names for database compatibility
-    const { proxied, isAutoIP, providerId, ...validFields } = record as any;
-    
-    // Create direct SQL query instead of using Drizzle ORM to handle field name differences
-    const query = `
-      INSERT INTO dns_records (
-        domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9
-      ) 
-      RETURNING id, domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated, created_at
-    `;
-    
-    const params = [
-      validFields.domainId,
-      validFields.name,
-      validFields.type,
-      validFields.content,
-      validFields.ttl || 3600,
-      validFields.isActive !== undefined ? validFields.isActive : true,
-      isAutoIP !== undefined ? isAutoIP : false,
-      validFields.notes || null,
-      new Date()
-    ];
-    
-    // Execute the query directly
-    const result = await db.execute(query, params);
-    
-    if (!result || result.length === 0) {
-      throw new Error("Failed to create DNS record");
-    }
-    
-    const newRecord = result[0];
-    
-    // Return the record with frontend-expected field names
-    return {
-      id: newRecord.id,
-      domainId: newRecord.domain_id,
-      name: newRecord.name,
-      type: newRecord.type,
-      content: newRecord.content,
-      ttl: newRecord.ttl,
-      isActive: newRecord.is_active,
-      isAutoIP: newRecord.auto_update, // Map auto_update to isAutoIP
-      notes: newRecord.notes,
-      lastUpdated: newRecord.last_updated,
-      createdAt: newRecord.created_at,
-      proxied: null, // Add missing fields with null values
-      providerId: null
-    };
-  }
-
-  async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
-    // Filter out fields that don't exist in the database
-    const { proxied, isAutoIP, providerId, ...validFields } = recordData as any;
-    
-    // Build the SET clause parts and parameters for the SQL query
-    const setClauses = [];
-    const params = [id]; // First parameter is the id for the WHERE clause
-    let paramIndex = 2; // Start from $2 since $1 is the id
-    
-    // Add each field to the SET clauses
-    Object.entries(validFields).forEach(([key, value]) => {
-      // Convert camelCase to snake_case for database
-      const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      setClauses.push(`${dbField} = $${paramIndex}`);
-      params.push(value);
-      paramIndex++;
-    });
-    
-    // Handle isAutoIP separately (maps to auto_update in database)
-    if (isAutoIP !== undefined) {
-      setClauses.push(`auto_update = $${paramIndex}`);
-      params.push(isAutoIP);
-      paramIndex++;
-    }
-    
-    // Always update last_updated
-    setClauses.push(`last_updated = $${paramIndex}`);
-    params.push(new Date());
-    
-    // If no fields to update other than last_updated, return the existing record
-    if (setClauses.length === 1) {
-      // Get the record first to return it
-      const existingRecord = await this.getDnsRecord(id);
-      if (!existingRecord) return undefined;
+    try {
+      // Convert snake_case field names for database compatibility
+      const { proxied, isAutoIP, providerId, ...validFields } = record as any;
       
-      // Update just the last_updated field
-      const query = `
-        UPDATE dns_records 
-        SET last_updated = $2
-        WHERE id = $1
+      // Create SQL query with proper parameterization using SQL template literals
+      const queryText = sql`
+        INSERT INTO dns_records (
+          domain_id, name, type, content, ttl, 
+          is_active, auto_update, notes, last_updated
+        ) VALUES (
+          ${validFields.domainId},
+          ${validFields.name},
+          ${validFields.type},
+          ${validFields.content},
+          ${validFields.ttl || 3600},
+          ${validFields.isActive !== undefined ? validFields.isActive : true},
+          ${isAutoIP !== undefined ? isAutoIP : false},
+          ${validFields.notes || null},
+          ${new Date()}
+        ) 
         RETURNING id, domain_id, name, type, content, ttl, 
           is_active, auto_update, notes, last_updated, created_at
       `;
       
-      const result = await db.execute(query, [id, new Date()]);
-      if (!result || result.length === 0) return undefined;
+      // Execute the query directly with SQL template literal
+      const result = await db.execute(queryText);
+      
+      if (!Array.isArray(result) || result.length === 0) {
+        throw new Error("Failed to create DNS record");
+      }
+      
+      const newRecord = result[0];
+      
+      // Return the record with frontend-expected field names
+      return {
+        id: newRecord.id,
+        domainId: newRecord.domain_id,
+        name: newRecord.name,
+        type: newRecord.type,
+        content: newRecord.content,
+        ttl: newRecord.ttl,
+        isActive: newRecord.is_active,
+        isAutoIP: newRecord.auto_update, // Map auto_update to isAutoIP
+        notes: newRecord.notes,
+        lastUpdated: newRecord.last_updated,
+        createdAt: newRecord.created_at,
+        proxied: null, // Add missing fields with null values
+        providerId: null
+      };
+    } catch (error) {
+      console.error("Error in createDnsRecord:", error);
+      throw error;
+    }
+  }
+
+  async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
+    try {
+      // Filter out fields that don't exist in the database
+      const { proxied, isAutoIP, providerId, ...validFields } = recordData as any;
+      
+      // If there's only isAutoIP or no fields at all, handle it separately
+      if (Object.keys(validFields).length === 0 && isAutoIP === undefined) {
+        // Just update the last_updated timestamp
+        const updateQuery = sql`
+          UPDATE dns_records 
+          SET last_updated = ${new Date()}
+          WHERE id = ${id}
+          RETURNING id, domain_id, name, type, content, ttl, 
+            is_active, auto_update, notes, last_updated, created_at
+        `;
+        
+        const updateResult = await db.execute(updateQuery);
+        
+        if (!Array.isArray(updateResult) || updateResult.length === 0) {
+          return undefined;
+        }
+        
+        const record = updateResult[0];
+        return {
+          id: record.id,
+          domainId: record.domain_id,
+          name: record.name,
+          type: record.type,
+          content: record.content,
+          ttl: record.ttl,
+          isActive: record.is_active,
+          isAutoIP: record.auto_update,
+          notes: record.notes,
+          lastUpdated: record.last_updated,
+          createdAt: record.created_at,
+          proxied: null,
+          providerId: null
+        };
+      }
+      
+      // Create dynamic SQL for the update
+      // Start with base query
+      let sqlQuery = sql`UPDATE dns_records SET `;
+      
+      // Add each field dynamically
+      const setFragments = [];
+      
+      // Process all valid fields
+      Object.entries(validFields).forEach(([key, value]) => {
+        // Convert camelCase to snake_case for database
+        const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        setFragments.push(sql`${sql.raw(dbField)} = ${value}`);
+      });
+      
+      // Add isAutoIP if it exists (maps to auto_update in database)
+      if (isAutoIP !== undefined) {
+        setFragments.push(sql`auto_update = ${isAutoIP}`);
+      }
+      
+      // Always update last_updated
+      setFragments.push(sql`last_updated = ${new Date()}`);
+      
+      // Join all the SET fragments
+      for (let i = 0; i < setFragments.length; i++) {
+        sqlQuery = sql`${sqlQuery}${setFragments[i]}`;
+        if (i < setFragments.length - 1) {
+          sqlQuery = sql`${sqlQuery}, `;
+        }
+      }
+      
+      // Add WHERE and RETURNING
+      sqlQuery = sql`${sqlQuery} WHERE id = ${id}
+        RETURNING id, domain_id, name, type, content, ttl, 
+        is_active, auto_update, notes, last_updated, created_at`;
+      
+      // Execute the query
+      const result = await db.execute(sqlQuery);
+      
+      if (!Array.isArray(result) || result.length === 0) {
+        return undefined;
+      }
       
       // Map result to expected format
       const updatedRecord = result[0];
@@ -570,42 +621,29 @@ export class DatabaseStorage implements IStorage {
         proxied: null,
         providerId: null
       };
+    } catch (error) {
+      console.error("Error in updateDnsRecord:", error);
+      return undefined;
     }
-    
-    // Build and execute the query with all fields
-    const query = `
-      UPDATE dns_records 
-      SET ${setClauses.join(', ')}
-      WHERE id = $1
-      RETURNING id, domain_id, name, type, content, ttl, 
-        is_active, auto_update, notes, last_updated, created_at
-    `;
-    
-    const result = await db.execute(query, params);
-    if (!result || result.length === 0) return undefined;
-    
-    // Map result to expected format
-    const updatedRecord = result[0];
-    return {
-      id: updatedRecord.id,
-      domainId: updatedRecord.domain_id,
-      name: updatedRecord.name,
-      type: updatedRecord.type,
-      content: updatedRecord.content,
-      ttl: updatedRecord.ttl,
-      isActive: updatedRecord.is_active,
-      isAutoIP: updatedRecord.auto_update,
-      notes: updatedRecord.notes,
-      lastUpdated: updatedRecord.last_updated,
-      createdAt: updatedRecord.created_at,
-      proxied: null,
-      providerId: null
-    };
   }
 
   async deleteDnsRecord(id: string): Promise<boolean> {
-    const result = await db.delete(dnsRecords).where(eq(dnsRecords.id, id)).returning();
-    return result.length > 0;
+    try {
+      // Use SQL template for explicit query
+      const query = sql`
+        DELETE FROM dns_records
+        WHERE id = ${id}
+        RETURNING id
+      `;
+      
+      const result = await db.execute(query);
+      
+      // Check if any rows were deleted
+      return Array.isArray(result) && result.length > 0;
+    } catch (error) {
+      console.error("Error in deleteDnsRecord:", error);
+      return false;
+    }
   }
 
   // Provider management
