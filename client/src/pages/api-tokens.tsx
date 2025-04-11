@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/context/organization-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -61,6 +62,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -68,7 +70,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Key, MoreVertical, Calendar, Copy, Info } from "lucide-react";
+import { Loader2, Key, MoreVertical, CalendarIcon, Copy, Info, Clock } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
 // Token form schema
@@ -126,25 +128,44 @@ export default function ApiTokensPage() {
       if (data.expiresIn && data.expiresIn !== 'never') {
         const now = new Date();
         
-        switch (data.expiresIn) {
-          case '1hour':
-            tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
-            break;
-          case '1day':
-            tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-            break;
-          case '7days':
-            tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-            break;
-          case '30days':
-            tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-            break;
-          case '90days':
-            tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-            break;
-          case '1year':
-            tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-            break;
+        if (data.expiresIn === 'custom' && data.customDate) {
+          // For custom date/time
+          if (data.customDate) {
+            const customDate = new Date(data.customDate);
+            
+            // If time was selected, add it to the date
+            if (data.customTime) {
+              const [hours, minutes] = data.customTime.split(':').map(Number);
+              customDate.setHours(hours, minutes, 0, 0);
+            } else {
+              // Default to end of day if no time selected
+              customDate.setHours(23, 59, 59, 999);
+            }
+            
+            tokenData.expiresAt = customDate;
+          }
+        } else {
+          // For preset expiration options
+          switch (data.expiresIn) {
+            case '1hour':
+              tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+              break;
+            case '1day':
+              tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              break;
+            case '7days':
+              tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              break;
+            case '30days':
+              tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              break;
+            case '90days':
+              tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+              break;
+            case '1year':
+              tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+              break;
+          }
         }
       }
       
@@ -281,7 +302,7 @@ export default function ApiTokensPage() {
                     <TableCell>
                       {token.expiresAt ? (
                         <div className="flex items-center">
-                          <Calendar className="mr-1 h-3 w-3 text-muted-foreground" />
+                          <CalendarIcon className="mr-1 h-3 w-3 text-muted-foreground" />
                           <span 
                             className="text-sm"
                             title={format(new Date(token.expiresAt), 'PPpp')}
@@ -435,6 +456,7 @@ export default function ApiTokensPage() {
                         <SelectItem value="30days">30 days</SelectItem>
                         <SelectItem value="90days">90 days</SelectItem>
                         <SelectItem value="1year">1 year</SelectItem>
+                        <SelectItem value="custom">Custom date/time</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
@@ -444,6 +466,101 @@ export default function ApiTokensPage() {
                   </FormItem>
                 )}
               />
+              
+              {/* Custom date and time fields - show only when custom expiration is selected */}
+              {form.watch("expiresIn") === "custom" && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="customDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Custom Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          The date when the token will expire
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="customTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Time</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a time" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="00:00">12:00 AM</SelectItem>
+                            <SelectItem value="01:00">1:00 AM</SelectItem>
+                            <SelectItem value="02:00">2:00 AM</SelectItem>
+                            <SelectItem value="03:00">3:00 AM</SelectItem>
+                            <SelectItem value="04:00">4:00 AM</SelectItem>
+                            <SelectItem value="05:00">5:00 AM</SelectItem>
+                            <SelectItem value="06:00">6:00 AM</SelectItem>
+                            <SelectItem value="07:00">7:00 AM</SelectItem>
+                            <SelectItem value="08:00">8:00 AM</SelectItem>
+                            <SelectItem value="09:00">9:00 AM</SelectItem>
+                            <SelectItem value="10:00">10:00 AM</SelectItem>
+                            <SelectItem value="11:00">11:00 AM</SelectItem>
+                            <SelectItem value="12:00">12:00 PM</SelectItem>
+                            <SelectItem value="13:00">1:00 PM</SelectItem>
+                            <SelectItem value="14:00">2:00 PM</SelectItem>
+                            <SelectItem value="15:00">3:00 PM</SelectItem>
+                            <SelectItem value="16:00">4:00 PM</SelectItem>
+                            <SelectItem value="17:00">5:00 PM</SelectItem>
+                            <SelectItem value="18:00">6:00 PM</SelectItem>
+                            <SelectItem value="19:00">7:00 PM</SelectItem>
+                            <SelectItem value="20:00">8:00 PM</SelectItem>
+                            <SelectItem value="21:00">9:00 PM</SelectItem>
+                            <SelectItem value="22:00">10:00 PM</SelectItem>
+                            <SelectItem value="23:00">11:00 PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The time when the token will expire
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
               
               <DialogFooter>
                 <Button 
