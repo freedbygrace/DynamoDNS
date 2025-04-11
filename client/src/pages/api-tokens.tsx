@@ -345,7 +345,7 @@ export default function ApiTokensPage() {
                   <TableRow key={token.id}>
                     <TableCell className="font-medium">{token.name}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {token.token.substring(0, 8)}...
+                      {"*".repeat(16)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs capitalize">
@@ -785,7 +785,7 @@ export default function ApiTokensPage() {
                 <div className="bg-muted p-4 rounded-md relative">
                   <div className="font-mono text-sm break-all">
                     {viewingFullToken ? selectedToken.token : (
-                      selectedToken.token.substring(0, 8) + '...' + selectedToken.token.substring(selectedToken.token.length - 8)
+                      "*".repeat(32)
                     )}
                   </div>
                   <Button 
