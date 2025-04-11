@@ -130,8 +130,7 @@ export class MemStorage implements IStorage {
     this.webhooksMap = new Map();
     this.webhookDeliveryLogsMap = new Map();
     this.metricsMap = new Map();
-    this.groupsMap = new Map();
-    this.groupMembersMap = new Map();
+    // Group maps initialization has been removed
     
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
@@ -143,8 +142,7 @@ export class MemStorage implements IStorage {
     this.webhookIdCounter = 1;
     this.webhookDeliveryLogIdCounter = 1;
     this.metricIdCounter = 1;
-    this.groupIdCounter = 1;
-    this.groupMemberIdCounter = 1;
+    // Group counter initialization has been removed
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -190,40 +188,7 @@ export class MemStorage implements IStorage {
       this.userIdCounter = 2; // Ensure the next ID is after our fixed one
     }
     
-    // Create sample groups
-    const adminGroup: InsertGroup = {
-      name: "Administrators",
-      description: "Group for administrators with full system access",
-      isActive: true,
-      createdBy: adminUser.id,
-      parentGroupId: null
-    };
-    const adminsGroup = this.createGroup(adminGroup);
-    
-    const dnsManagersGroup: InsertGroup = {
-      name: "DNS Managers",
-      description: "Group for users who can manage DNS records",
-      isActive: true,
-      createdBy: adminUser.id,
-      parentGroupId: null
-    };
-    const dnsGroup = this.createGroup(dnsManagersGroup);
-    
-    // Add the admin user to the administrators group
-    this.addGroupMember({
-      groupId: adminsGroup.id,
-      memberId: adminUser.id,
-      memberType: "user",
-      addedBy: adminUser.id
-    });
-    
-    // Add the organization to the DNS managers group
-    this.addGroupMember({
-      groupId: dnsGroup.id,
-      memberId: organization.id,
-      memberType: "organization",
-      addedBy: adminUser.id
-    });
+    // Group creation and membership code has been removed
   }
 
   // Users
