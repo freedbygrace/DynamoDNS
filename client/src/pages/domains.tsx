@@ -92,10 +92,10 @@ export default function DomainsPage() {
   // Add domain mutation
   const addDomainMutation = useMutation({
     mutationFn: async (data: z.infer<typeof domainFormSchema>) => {
-      // Prepare domain data with organizationId
+      // Prepare domain data with customerId
       const domainData: InsertDomain = {
         ...data,
-        organizationId: currentOrganization?.id || "",
+        customerId: currentCustomer?.id || "",
       };
       
       // Add special handling for providerId
@@ -111,7 +111,7 @@ export default function DomainsPage() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/domains", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/domains", currentCustomer?.id] });
       setIsAddDomainDialogOpen(false);
       form.reset();
       toast({
@@ -134,7 +134,7 @@ export default function DomainsPage() {
       await apiRequest("DELETE", `/api/domains/${domainId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/domains", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/domains", currentCustomer?.id] });
       setIsDeleteDialogOpen(false);
       setSelectedDomain(null);
       toast({
