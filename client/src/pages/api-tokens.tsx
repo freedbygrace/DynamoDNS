@@ -80,6 +80,15 @@ const tokenFormSchema = z.object({
   expiresIn: z.string().optional(),
   customDate: z.date().optional(),
   customTime: z.string().optional(),
+}).refine((data) => {
+  // If custom expiration is selected, a date must be provided
+  if (data.expiresIn === 'custom' && !data.customDate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select a date for the custom expiration",
+  path: ["customDate"]
 });
 
 export default function ApiTokensPage() {
@@ -136,7 +145,13 @@ export default function ApiTokensPage() {
             // If time was selected, add it to the date
             if (data.customTime) {
               const [hours, minutes] = data.customTime.split(':').map(Number);
-              customDate.setHours(hours, minutes, 0, 0);
+              // Check if hours and minutes are valid numbers
+              if (!isNaN(hours) && !isNaN(minutes)) {
+                customDate.setHours(hours, minutes, 0, 0);
+              } else {
+                // Default to end of day if time format is invalid
+                customDate.setHours(23, 59, 59, 999);
+              }
             } else {
               // Default to end of day if no time selected
               customDate.setHours(23, 59, 59, 999);
@@ -516,44 +531,25 @@ export default function ApiTokensPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Custom Time</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a time" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="00:00">12:00 AM</SelectItem>
-                            <SelectItem value="01:00">1:00 AM</SelectItem>
-                            <SelectItem value="02:00">2:00 AM</SelectItem>
-                            <SelectItem value="03:00">3:00 AM</SelectItem>
-                            <SelectItem value="04:00">4:00 AM</SelectItem>
-                            <SelectItem value="05:00">5:00 AM</SelectItem>
-                            <SelectItem value="06:00">6:00 AM</SelectItem>
-                            <SelectItem value="07:00">7:00 AM</SelectItem>
-                            <SelectItem value="08:00">8:00 AM</SelectItem>
-                            <SelectItem value="09:00">9:00 AM</SelectItem>
-                            <SelectItem value="10:00">10:00 AM</SelectItem>
-                            <SelectItem value="11:00">11:00 AM</SelectItem>
-                            <SelectItem value="12:00">12:00 PM</SelectItem>
-                            <SelectItem value="13:00">1:00 PM</SelectItem>
-                            <SelectItem value="14:00">2:00 PM</SelectItem>
-                            <SelectItem value="15:00">3:00 PM</SelectItem>
-                            <SelectItem value="16:00">4:00 PM</SelectItem>
-                            <SelectItem value="17:00">5:00 PM</SelectItem>
-                            <SelectItem value="18:00">6:00 PM</SelectItem>
-                            <SelectItem value="19:00">7:00 PM</SelectItem>
-                            <SelectItem value="20:00">8:00 PM</SelectItem>
-                            <SelectItem value="21:00">9:00 PM</SelectItem>
-                            <SelectItem value="22:00">10:00 PM</SelectItem>
-                            <SelectItem value="23:00">11:00 PM</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <div className="flex space-x-2">
+                            <Input
+                              type="time"
+                              {...field}
+                              className="flex-1"
+                              placeholder="HH:MM"
+                              defaultValue="23:59"
+                            />
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 text-muted-foreground mr-2" />
+                              <span className="text-sm text-muted-foreground">
+                                {field.value ? field.value : "23:59"} 
+                              </span>
+                            </div>
+                          </div>
+                        </FormControl>
                         <FormDescription>
-                          The time when the token will expire
+                          The exact time (HH:MM) when the token will expire
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
