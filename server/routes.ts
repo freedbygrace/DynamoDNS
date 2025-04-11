@@ -997,6 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(token);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log("API Token Validation error details:", JSON.stringify(error.errors, null, 2));
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
         console.error("Error creating API token:", error);
