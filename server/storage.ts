@@ -438,6 +438,7 @@ export class MemStorage implements IStorage {
       token: token.token,
       organizationId: token.organizationId,
       permissions: token.permissions ?? null,
+      role: token.role || 'readonly',
       createdBy: token.createdBy,
       isActive: token.isActive ?? true,
       expiresAt: token.expiresAt ?? null,
