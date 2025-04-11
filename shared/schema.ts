@@ -85,6 +85,7 @@ export const apiTokens = pgTable("api_tokens", {
   token: text("token").notNull().unique(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   permissions: text("permissions").array(),
+  role: text("role").default("readonly").notNull(), // Adding explicit role like users have
   createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -206,6 +207,7 @@ export const insertApiTokenSchema = createInsertSchema(apiTokens).pick({
   token: true,
   organizationId: true,
   permissions: true,
+  role: true,
   createdBy: true,
   isActive: true,
   expiresAt: true,

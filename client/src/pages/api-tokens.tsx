@@ -68,6 +68,7 @@ import { formatDistanceToNow, format } from "date-fns";
 const tokenFormSchema = z.object({
   name: z.string().min(1, "Token name is required"),
   permissions: z.array(z.string()).min(1, "At least one permission is required"),
+  role: z.string().min(1, "Role is required"),
   expiresAt: z.string().optional(),
 });
 
@@ -94,6 +95,7 @@ export default function ApiTokensPage() {
     defaultValues: {
       name: "",
       permissions: ["readonly"],
+      role: "readonly",
       expiresAt: undefined,
     },
   });
