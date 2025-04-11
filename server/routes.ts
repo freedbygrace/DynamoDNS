@@ -1141,13 +1141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "API token not found" });
       }
       
-      // Mask token in response
-      const maskedToken = {
-        ...updatedToken,
-        token: updatedToken.token.substring(0, 8) + '...'
-      };
-      
-      res.json(maskedToken);
+      // Return the full token in response (frontend will handle masking for display)
+      res.json(updatedToken);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Validation error", errors: error.errors });
@@ -1191,13 +1186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "API token not found" });
       }
       
-      // Mask token in response
-      const maskedToken = {
-        ...updatedToken,
-        token: "*".repeat(16) // Use asterisks for token masking
-      };
-      
-      res.json(maskedToken);
+      // Return the full token in response (frontend will handle masking for display)
+      res.json(updatedToken);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Validation error", errors: error.errors });
