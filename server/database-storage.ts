@@ -406,53 +406,107 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
-    return await db.select({
-      id: dnsRecords.id,
-      domainId: dnsRecords.domainId,
-      name: dnsRecords.name,
-      type: dnsRecords.type,
-      content: dnsRecords.content,
-      ttl: dnsRecords.ttl,
-      isActive: dnsRecords.isActive,
-      isAutoIP: dnsRecords.isAutoIP,
-      notes: dnsRecords.notes,
-      providerId: dnsRecords.providerId,
-      lastUpdated: dnsRecords.lastUpdated,
-      createdAt: dnsRecords.createdAt
-    })
-      .from(dnsRecords)
-      .where(eq(dnsRecords.domainId, domainId));
+    // Use raw SQL to select only columns that actually exist in the database
+    const query = `
+      SELECT 
+        id, domain_id, name, type, content, ttl, 
+        is_active, auto_update, notes, last_updated, created_at
+      FROM dns_records 
+      WHERE domain_id = $1
+    `;
+    
+    const result = await db.execute(query, [domainId]);
+    
+    // Map the results to match our schema expectations
+    return result.map(record => ({
+      id: record.id,
+      domainId: record.domain_id,
+      name: record.name,
+      type: record.type,
+      content: record.content,
+      ttl: record.ttl,
+      isActive: record.is_active,
+      isAutoIP: record.auto_update, // Map auto_update to isAutoIP
+      notes: record.notes,
+      lastUpdated: record.last_updated,
+      createdAt: record.created_at,
+      proxied: null, // Add missing fields with null values
+      providerId: null
+    }));
   }
 
   async createDnsRecord(record: InsertDnsRecord): Promise<DnsRecord> {
-    // Filter out the proxied field if it exists
-    const { proxied, ...recordData } = record as any;
+    // Convert snake_case field names for database compatibility
+    const { proxied, isAutoIP, providerId, ...validFields } = record as any;
     
-    // Insert the record without the proxied field
-    const [newRecord] = await db.insert(dnsRecords).values(recordData).returning({
-      id: dnsRecords.id,
-      domainId: dnsRecords.domainId,
-      name: dnsRecords.name,
-      type: dnsRecords.type,
-      content: dnsRecords.content,
-      ttl: dnsRecords.ttl,
-      isActive: dnsRecords.isActive,
-      isAutoIP: dnsRecords.isAutoIP,
-      notes: dnsRecords.notes,
-      providerId: dnsRecords.providerId,
-      lastUpdated: dnsRecords.lastUpdated,
-      createdAt: dnsRecords.createdAt
-    });
+    // Create direct SQL query instead of using Drizzle ORM to handle field name differences
+    const query = `
+      INSERT INTO dns_records (
+        domain_id, name, type, content, ttl, 
+        is_active, auto_update, notes, last_updated
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9
+      ) 
+      RETURNING id, domain_id, name, type, content, ttl, 
+        is_active, auto_update, notes, last_updated, created_at
+    `;
     
-    return newRecord;
+    const params = [
+      validFields.domainId,
+      validFields.name,
+      validFields.type,
+      validFields.content,
+      validFields.ttl || 3600,
+      validFields.isActive !== undefined ? validFields.isActive : true,
+      isAutoIP !== undefined ? isAutoIP : false,
+      validFields.notes || null,
+      new Date()
+    ];
+    
+    // Execute the query directly
+    const result = await db.execute(query, params);
+    
+    if (!result || result.length === 0) {
+      throw new Error("Failed to create DNS record");
+    }
+    
+    const newRecord = result[0];
+    
+    // Return the record with frontend-expected field names
+    return {
+      id: newRecord.id,
+      domainId: newRecord.domain_id,
+      name: newRecord.name,
+      type: newRecord.type,
+      content: newRecord.content,
+      ttl: newRecord.ttl,
+      isActive: newRecord.is_active,
+      isAutoIP: newRecord.auto_update, // Map auto_update to isAutoIP
+      notes: newRecord.notes,
+      lastUpdated: newRecord.last_updated,
+      createdAt: newRecord.created_at,
+      proxied: null, // Add missing fields with null values
+      providerId: null
+    };
   }
 
   async updateDnsRecord(id: string, recordData: Partial<InsertDnsRecord>): Promise<DnsRecord | undefined> {
-    // Filter out the proxied field if it exists
-    const { proxied, ...filteredData } = recordData as any;
+    // Filter out the proxied field if it exists and map isAutoIP to autoUpdate
+    const { proxied, isAutoIP, ...filteredDataRaw } = recordData as any;
+    
+    // Create a proper data object with the correct field names 
+    const updateData: any = { 
+      ...filteredDataRaw,
+      lastUpdated: new Date() 
+    };
+    
+    // Map isAutoIP to autoUpdate if it exists
+    if (isAutoIP !== undefined) {
+      updateData.autoUpdate = isAutoIP;
+    }
     
     const [updatedRecord] = await db.update(dnsRecords)
-      .set({ ...filteredData, lastUpdated: new Date() })
+      .set(updateData)
       .where(eq(dnsRecords.id, id))
       .returning({
         id: dnsRecords.id,
@@ -462,14 +516,21 @@ export class DatabaseStorage implements IStorage {
         content: dnsRecords.content,
         ttl: dnsRecords.ttl,
         isActive: dnsRecords.isActive,
-        isAutoIP: dnsRecords.isAutoIP,
+        autoUpdate: dnsRecords.autoUpdate,
         notes: dnsRecords.notes,
-        providerId: dnsRecords.providerId,
         lastUpdated: dnsRecords.lastUpdated,
         createdAt: dnsRecords.createdAt
       });
     
-    return updatedRecord;
+    if (!updatedRecord) return undefined;
+    
+    // Return the record with frontend-expected field names
+    return {
+      ...updatedRecord,
+      isAutoIP: updatedRecord.autoUpdate,
+      proxied: null,
+      providerId: null
+    };
   }
 
   async deleteDnsRecord(id: string): Promise<boolean> {
