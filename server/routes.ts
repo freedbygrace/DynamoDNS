@@ -279,6 +279,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH endpoint for simple updates (like toggling active status)
+  app.patch("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
+    try {
+      console.log("Processing DNS record PATCH for id:", req.params.id);
+      console.log("PATCH payload:", JSON.stringify(req.body));
+      
+      const recordId = req.params.id;
+      const validatedData = insertDnsRecordSchema.partial().parse(req.body);
+      
+      // Get current record for history
+      const currentRecord = await storage.getDnsRecord(recordId);
+      if (!currentRecord) {
+        console.log(`DNS record not found with ID: ${recordId}`);
+        return res.status(404).json({ message: "DNS record not found" });
+      }
+      
+      console.log(`Found existing record:`, JSON.stringify(currentRecord));
+      
+      // For PATCH operations, we only update the specific fields provided
+      console.log(`Applying PATCH with data:`, JSON.stringify(validatedData));
+      
+      // Update the record
+      const record = await storage.updateDnsRecord(recordId, validatedData);
+      
+      if (!record) {
+        console.log(`PATCH failed - record not found or update failed`);
+        return res.status(404).json({ message: "DNS record not found or update failed" });
+      }
+      
+      console.log(`Record patched successfully:`, JSON.stringify(record));
+      
+      // Track history
+      await storage.addDnsHistory(
+        recordId,
+        "patch",
+        JSON.stringify(currentRecord),
+        JSON.stringify(record),
+        req.user?.id
+      );
+      
+      // Sync with provider if applicable, but only if we're changing isActive status
+      if (validatedData.isActive !== undefined) {
+        try {
+          const providerRecordId = await syncDnsRecordWithProvider(
+            'update', 
+            record.domainId, 
+            record, 
+            record.providerRecordId || undefined
+          );
+          
+          if (providerRecordId && providerRecordId !== record.providerRecordId) {
+            console.log(`Record synced with provider, updating provider record ID: ${providerRecordId}`);
+            // Update the record with the provider record ID
+            await storage.updateDnsRecord(record.id, { providerRecordId });
+          }
+        } catch (syncError) {
+          console.error("Failed to sync with provider:", syncError);
+          // Don't fail the request if sync fails, just log the error
+        }
+      }
+      
+      return res.json(record);
+    } catch (error) {
+      console.error("Error in PATCH DNS record:", error);
+      return res.status(500).json({ message: "Failed to update DNS record", error: String(error) });
+    }
+  });
+
   app.put("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
       console.log("Processing DNS record update for id:", req.params.id);
@@ -308,6 +376,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Using domain provider ID from domain:`, domain.providerId);
           validatedData.providerId = domain.providerId;
         }
+      }
+      
+      // Handle the proxied field separately for Cloudflare records
+      if (validatedData.proxied !== undefined) {
+        console.log(`Handling proxied field with value:`, validatedData.proxied);
       }
       
       // Log what we're about to update
