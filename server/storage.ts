@@ -9,6 +9,7 @@ import {
   type Webhook, type InsertWebhook,
   type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
   type DnsMetric, type InsertDnsMetric,
+  type CustomRole, type InsertCustomRole,
   type MemberType
 } from "@shared/schema";
 import session from "express-session";
@@ -110,6 +111,7 @@ export class MemStorage implements IStorage {
   private webhooksMap: Map<number, Webhook>;
   private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
   private metricsMap: Map<number, DnsMetric>;
+  private customRolesMap: Map<number, CustomRole>;
   // Group maps have been removed
   
   // Counters for IDs
@@ -123,6 +125,7 @@ export class MemStorage implements IStorage {
   private webhookIdCounter: number;
   private webhookDeliveryLogIdCounter: number;
   private metricIdCounter: number;
+  private customRoleIdCounter: number;
   // Group counters have been removed
   
   public sessionStore: any;
@@ -138,6 +141,7 @@ export class MemStorage implements IStorage {
     this.webhooksMap = new Map();
     this.webhookDeliveryLogsMap = new Map();
     this.metricsMap = new Map();
+    this.customRolesMap = new Map();
     // Group maps initialization has been removed
     
     this.userIdCounter = 1;
@@ -150,6 +154,7 @@ export class MemStorage implements IStorage {
     this.webhookIdCounter = 1;
     this.webhookDeliveryLogIdCounter = 1;
     this.metricIdCounter = 1;
+    this.customRoleIdCounter = 1;
     // Group counter initialization has been removed
     
     // Session store is created in the DatabaseStorage class
@@ -755,6 +760,50 @@ export class MemStorage implements IStorage {
     }
     
     return metrics.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  // Custom Roles management
+  async getCustomRole(id: string): Promise<CustomRole | undefined> {
+    return this.customRolesMap.get(parseInt(id));
+  }
+
+  async getCustomRoles(): Promise<CustomRole[]> {
+    return Array.from(this.customRolesMap.values());
+  }
+
+  async getCustomRoleByName(name: string): Promise<CustomRole | undefined> {
+    return Array.from(this.customRolesMap.values())
+      .find(role => role.name === name);
+  }
+
+  async createCustomRole(role: InsertCustomRole): Promise<CustomRole> {
+    const numId = this.customRoleIdCounter++;
+    const createdAt = new Date();
+    const newRole: CustomRole = {
+      id: numId.toString(),
+      name: role.name,
+      description: role.description || null,
+      permissions: role.permissions,
+      isActive: role.isActive ?? true,
+      createdAt,
+      createdBy: role.createdBy
+    };
+    this.customRolesMap.set(numId, newRole);
+    return newRole;
+  }
+
+  async updateCustomRole(id: string, roleData: Partial<InsertCustomRole>): Promise<CustomRole | undefined> {
+    const numId = parseInt(id);
+    const role = await this.getCustomRole(id);
+    if (!role) return undefined;
+    
+    const updatedRole = { ...role, ...roleData };
+    this.customRolesMap.set(numId, updatedRole);
+    return updatedRole;
+  }
+
+  async deleteCustomRole(id: string): Promise<boolean> {
+    return this.customRolesMap.delete(parseInt(id));
   }
 }
 
