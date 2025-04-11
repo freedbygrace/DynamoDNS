@@ -429,8 +429,8 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Content</TableHead>
                   <TableHead>AutoIP</TableHead>
+                  <TableHead>Content</TableHead>
                   <TableHead>TTL</TableHead>
                   <TableHead>Last Update</TableHead>
                   <TableHead>Status</TableHead>
@@ -458,6 +458,17 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{record.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {record.isAutoIP ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                          Enabled
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                          Disabled
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {record.isAutoIP ? (
@@ -512,17 +523,6 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {record.isAutoIP ? (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                          Enabled
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
-                          Disabled
-                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>{record.ttl}s</TableCell>
