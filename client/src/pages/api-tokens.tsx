@@ -264,7 +264,7 @@ export default function ApiTokensPage() {
   // Handle viewing token
   const handleViewToken = (token: ApiToken) => {
     setSelectedToken(token);
-    setViewingFullToken(false);
+    setViewingFullToken(false); // Start with token hidden
     setIsViewTokenDialogOpen(true);
   };
   
