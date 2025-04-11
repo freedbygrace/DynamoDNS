@@ -182,6 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
+      console.log("Processing DNS record update for id:", req.params.id);
+      console.log("Update payload:", JSON.stringify(req.body));
+      
       const recordId = req.params.id;
       const validatedData = insertDnsRecordSchema.partial().parse(req.body);
       
@@ -193,42 +196,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current record for history
       const currentRecord = await storage.getDnsRecord(recordId);
       if (!currentRecord) {
+        console.log(`DNS record not found with ID: ${recordId}`);
         return res.status(404).json({ message: "DNS record not found" });
       }
+      
+      console.log(`Found existing record:`, JSON.stringify(currentRecord));
       
       // Get domain to retrieve providerId if needed
       if (!validatedData.providerId) {
         const domain = await storage.getDomain(currentRecord.domainId);
         if (domain) {
+          console.log(`Using domain provider ID from domain:`, domain.providerId);
           validatedData.providerId = domain.providerId;
         }
       }
       
+      // Log what we're about to update
+      console.log(`Updating record with data:`, JSON.stringify(validatedData));
+      
+      // Update the record
       const record = await storage.updateDnsRecord(recordId, validatedData);
       
       if (!record) {
-        return res.status(404).json({ message: "DNS record not found" });
+        console.log(`Update failed - record not found or update failed`);
+        return res.status(404).json({ message: "DNS record not found or update failed" });
       }
       
-      // Track history
-      await storage.addDnsHistory(
-        recordId,
-        "update",
-        JSON.stringify(currentRecord),
-        JSON.stringify(record),
-        req.user?.id
-      );
+      console.log(`Record updated successfully:`, JSON.stringify(record));
       
-      // Trigger webhooks
-      await triggerDnsWebhooks("update", record.domainId, record, currentRecord, req.user?.id);
+      try {
+        // Track history
+        await storage.addDnsHistory(
+          recordId,
+          "update",
+          JSON.stringify(currentRecord),
+          JSON.stringify(record),
+          req.user?.id
+        );
+        
+        // Trigger webhooks
+        await triggerDnsWebhooks("update", record.domainId, record, currentRecord, req.user?.id);
+      } catch (historyError) {
+        // Don't fail the request if history tracking fails
+        console.error("Error tracking history:", historyError);
+      }
       
       res.json(record);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
         console.error("Error updating DNS record:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ 
+          message: "Failed to update DNS record",
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
     }
   });
@@ -236,35 +259,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/dns-records/:id", requireRole(["admin", "manager"]), async (req, res) => {
     try {
       const recordId = req.params.id;
+      console.log(`Processing DNS record deletion for ID: ${recordId}`);
       
       // Get current record for history and webhooks
       const currentRecord = await storage.getDnsRecord(recordId);
       if (!currentRecord) {
+        console.log(`DNS record not found for deletion with ID: ${recordId}`);
         return res.status(404).json({ message: "DNS record not found" });
       }
       
+      console.log(`Found record to delete:`, JSON.stringify(currentRecord));
+      
+      // Perform the deletion
       const success = await storage.deleteDnsRecord(recordId);
       
       if (!success) {
-        return res.status(404).json({ message: "DNS record not found" });
+        console.log(`Delete operation failed for record ID: ${recordId}`);
+        return res.status(404).json({ message: "DNS record not found or could not be deleted" });
       }
       
-      // Track history
-      await storage.addDnsHistory(
-        recordId,
-        "delete",
-        JSON.stringify(currentRecord),
-        undefined,
-        req.user?.id
-      );
+      console.log(`Successfully deleted record with ID: ${recordId}`);
       
-      // Trigger webhooks
-      await triggerDnsWebhooks("delete", currentRecord.domainId, null, currentRecord, req.user?.id);
+      try {
+        // Track history
+        await storage.addDnsHistory(
+          recordId,
+          "delete",
+          JSON.stringify(currentRecord),
+          undefined,
+          req.user?.id
+        );
+        
+        // Trigger webhooks
+        await triggerDnsWebhooks("delete", currentRecord.domainId, null, currentRecord, req.user?.id);
+        
+        console.log(`History and webhooks processed for deleted record ${recordId}`);
+      } catch (historyError) {
+        // Don't fail the request if history tracking fails
+        console.error("Error tracking history for deleted record:", historyError);
+      }
       
+      // Return success
       res.status(204).end();
     } catch (error) {
       console.error("Error deleting DNS record:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ 
+        message: "Failed to delete DNS record", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
