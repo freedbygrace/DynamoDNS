@@ -65,16 +65,16 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   // Define admin navigation items
   const adminNavItems = [
     {
-      title: "Users & Roles",
+      title: "Users",
       href: "/users-roles",
       icon: <Users className="w-5 h-5 mr-3" />,
       roles: ["admin"],
     },
     {
-      title: "Groups",
-      href: "/groups",
-      icon: <Users className="w-5 h-5 mr-3" />,
-      roles: ["admin", "manager"],
+      title: "Roles",
+      href: "/roles",
+      icon: <Key className="w-5 h-5 mr-3" />,
+      roles: ["admin"],
     },
     {
       title: "Webhooks",

@@ -143,40 +143,7 @@ export const customRoles = pgTable("custom_roles", {
   createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
 });
 
-// Groups can contain users, organizations, or other groups
-export const groups = pgTable("groups", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
-  parentGroupId: uuid("parent_group_id").references(() => groups.id, { onDelete: "set null" }),
-});
-
-// Group members - can be users, organizations, or other groups
-export const groupMembers = pgTable("group_members", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
-  // Specify the type of member: "user", "organization", or "group"
-  memberType: text("member_type").notNull(),
-  // ID of the member (user, organization, or group)
-  memberId: uuid("member_id").notNull(),
-  addedAt: timestamp("added_at").defaultNow().notNull(),
-  addedBy: uuid("added_by").notNull().references(() => users.id, { onDelete: "set null" }),
-});
-
-// Group role assignments - associates groups with roles
-export const groupRoles = pgTable("group_roles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
-  // Can be either a system role (string) or a custom role ID (uuid)
-  roleId: text("role_id").notNull(),
-  // Indicates if this is a system role or a custom role
-  isSystemRole: boolean("is_system_role").notNull(),
-  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
-  assignedBy: uuid("assigned_by").notNull().references(() => users.id, { onDelete: "set null" }),
-});
+// Note: Groups, GroupMembers, and GroupRoles tables have been removed in this version
 
 // Schema Validation
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -252,27 +219,7 @@ export const insertCustomRoleSchema = createInsertSchema(customRoles).pick({
   createdBy: true,
 });
 
-export const insertGroupSchema = createInsertSchema(groups).pick({
-  name: true,
-  description: true,
-  isActive: true,
-  createdBy: true,
-  parentGroupId: true,
-});
-
-export const insertGroupMemberSchema = createInsertSchema(groupMembers).pick({
-  groupId: true,
-  memberType: true,
-  memberId: true,
-  addedBy: true,
-});
-
-export const insertGroupRoleSchema = createInsertSchema(groupRoles).pick({
-  groupId: true,
-  roleId: true,
-  isSystemRole: true,
-  assignedBy: true,
-});
+// Note: Group-related insert schemas have been removed in this version
 
 export const insertWebhookSchema = createInsertSchema(webhooks).pick({
   name: true,
@@ -331,14 +278,9 @@ export type ApiToken = typeof apiTokens.$inferSelect;
 export type DnsHistory = typeof dnsHistory.$inferSelect;
 export type DnsMetric = typeof dnsMetrics.$inferSelect;
 export type CustomRole = typeof customRoles.$inferSelect;
-export type Group = typeof groups.$inferSelect;
-export type GroupMember = typeof groupMembers.$inferSelect;
-export type GroupRole = typeof groupRoles.$inferSelect;
 
+// Note: Group-related types have been removed in this version
 export type InsertCustomRole = z.infer<typeof insertCustomRoleSchema>;
-export type InsertGroup = z.infer<typeof insertGroupSchema>;
-export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
-export type InsertGroupRole = z.infer<typeof insertGroupRoleSchema>;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhookDeliveryLog = z.infer<typeof insertWebhookDeliveryLogSchema>;
@@ -353,8 +295,8 @@ export type SystemRole = typeof systemRoles[number];
 // User roles can be system roles or custom roles
 export type UserRole = SystemRole | string;
 
-// Define member types for group members
-export const memberTypes = ['user', 'organization', 'group'] as const;
+// Define member types (group type removed)
+export const memberTypes = ['user', 'organization'] as const;
 export type MemberType = typeof memberTypes[number];
 
 // Provider Types
@@ -452,49 +394,11 @@ export const webhookDeliveryLogsRelations = relations(webhookDeliveryLogs, ({ on
 
 
 // Custom roles relations
-export const customRolesRelations = relations(customRoles, ({ one, many }) => ({
+export const customRolesRelations = relations(customRoles, ({ one }) => ({
   creator: one(users, {
     fields: [customRoles.createdBy],
     references: [users.id],
   }),
-  groupRoles: many(groupRoles),
 }));
 
-// Group relations
-export const groupsRelations = relations(groups, ({ one, many }) => ({
-  creator: one(users, {
-    fields: [groups.createdBy],
-    references: [users.id],
-  }),
-  parentGroup: one(groups, {
-    fields: [groups.parentGroupId],
-    references: [groups.id],
-    relationName: "parentGroup",
-  }),
-  members: many(groupMembers),
-  roles: many(groupRoles),
-}));
-
-// Group members relations
-export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
-  group: one(groups, {
-    fields: [groupMembers.groupId],
-    references: [groups.id],
-  }),
-  addedByUser: one(users, {
-    fields: [groupMembers.addedBy],
-    references: [users.id],
-  }),
-}));
-
-// Group roles relations
-export const groupRolesRelations = relations(groupRoles, ({ one }) => ({
-  group: one(groups, {
-    fields: [groupRoles.groupId],
-    references: [groups.id],
-  }),
-  assignedByUser: one(users, {
-    fields: [groupRoles.assignedBy],
-    references: [users.id],
-  }),
-}));
+// Note: Group-related relations have been removed in this version

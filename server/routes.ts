@@ -15,8 +15,6 @@ import {
   insertWebhookSchema,
   insertDnsMetricSchema,
   insertCustomRoleSchema,
-  insertGroupSchema,
-  insertGroupMemberSchema,
   recordTypes,
   providerTypes,
   customRoles,
