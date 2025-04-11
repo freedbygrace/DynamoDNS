@@ -58,11 +58,11 @@ export const dnsRecords = pgTable("dns_records", {
   type: text("type").notNull(),
   content: text("content").notNull(),
   ttl: integer("ttl").default(3600),
-  proxied: boolean("proxied").default(false),
-  isActive: boolean("is_active").default(true).notNull(),
-  isAutoIP: boolean("is_auto_ip").default(false).notNull(),
+  priority: integer("priority"),
+  providerRecordId: text("provider_record_id"),
   notes: text("notes"),
-  providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  isAutoIP: boolean("auto_update").default(false).notNull(), // renamed to match database column
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -211,15 +211,19 @@ export const insertDnsRecordSchema = createInsertSchema(dnsRecords)
     type: true,
     content: true,
     ttl: true,
-    proxied: true,
     isActive: true,
     isAutoIP: true,
     notes: true,
-    providerId: true,
+    priority: true,
+    providerRecordId: true,
   })
   .extend({
-    // Override providerId to make it optional
-    providerId: z.string().uuid().nullable().optional(),
+    // Add proxied field for backward compatibility with frontend
+    proxied: z.boolean().nullable().optional(),
+    // Make priority optional with default value
+    priority: z.number().optional().default(0),
+    // Make provider record ID optional
+    providerRecordId: z.string().nullable().optional(),
   });
 
 export const insertProviderSchema = createInsertSchema(providers).pick({
@@ -382,10 +386,7 @@ export const dnsRecordsRelations = relations(dnsRecords, ({ one, many }) => ({
     fields: [dnsRecords.domainId],
     references: [domains.id],
   }),
-  provider: one(providers, {
-    fields: [dnsRecords.providerId],
-    references: [providers.id],
-  }),
+  // Provider is now referenced through the domain, not directly
   history: many(dnsHistory),
 }));
 
