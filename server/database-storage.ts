@@ -387,22 +387,27 @@ export class DatabaseStorage implements IStorage {
   // DNS Record management
   async getDnsRecord(id: string): Promise<DnsRecord | undefined> {
     try {
-      // Use raw SQL to select only columns that actually exist in the database
-      const query = sql`
+      console.log(`Getting DNS record with ID: ${id}`);
+      
+      // Use direct PostgreSQL query for consistent results
+      const { pool } = await import('./db');
+      const queryText = `
         SELECT 
           id, domain_id, name, type, content, ttl, priority,
           provider_record_id, is_active, auto_update, notes, last_updated, created_at
         FROM dns_records 
-        WHERE id = ${id}
+        WHERE id = $1
       `;
       
-      const result = await db.execute(query);
+      const result = await pool.query(queryText, [id]);
       
-      if (!Array.isArray(result) || result.length === 0) {
+      if (!result.rows || result.rows.length === 0) {
+        console.log(`DNS record with ID ${id} not found`);
         return undefined;
       }
       
-      const record = result[0];
+      const record = result.rows[0];
+      console.log(`Found DNS record:`, record);
       
       // Map the result to match our schema expectations
       return {
@@ -429,24 +434,24 @@ export class DatabaseStorage implements IStorage {
 
   async getDnsRecordsByDomain(domainId: string): Promise<DnsRecord[]> {
     try {
-      // Use raw SQL to select only columns that actually exist in the database
-      const query = sql`
+      console.log(`Getting DNS records for domain: ${domainId}`);
+      
+      // Use direct PostgreSQL query for consistent results
+      const { pool } = await import('./db');
+      const queryText = `
         SELECT 
           id, domain_id, name, type, content, ttl, priority,
           provider_record_id, is_active, auto_update, notes, last_updated, created_at
         FROM dns_records 
-        WHERE domain_id = ${domainId}
+        WHERE domain_id = $1
       `;
       
-      const result = await db.execute(query);
+      const result = await pool.query(queryText, [domainId]);
       
-      if (!Array.isArray(result)) {
-        console.log("Unexpected result format:", result);
-        return [];
-      }
+      console.log(`Found ${result.rows.length} DNS records for domain ${domainId}`);
       
       // Map the results to match our schema expectations
-      return result.map(record => ({
+      const mappedRecords = result.rows.map(record => ({
         id: record.id,
         domainId: record.domain_id,
         name: record.name,
@@ -462,6 +467,9 @@ export class DatabaseStorage implements IStorage {
         createdAt: record.created_at,
         proxied: null // Add missing field for frontend compatibility
       }));
+      
+      console.log("Mapped records:", JSON.stringify(mappedRecords, null, 2));
+      return mappedRecords;
     } catch (error) {
       console.error("Error in getDnsRecordsByDomain:", error);
       return [];
@@ -701,17 +709,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDnsRecord(id: string): Promise<boolean> {
     try {
-      // Use SQL template for explicit query
-      const query = sql`
+      console.log(`Deleting DNS record with ID: ${id}`);
+      
+      // Use direct PostgreSQL query for consistent results
+      const { pool } = await import('./db');
+      const queryText = `
         DELETE FROM dns_records
-        WHERE id = ${id}
+        WHERE id = $1
         RETURNING id
       `;
       
-      const result = await db.execute(query);
+      const result = await pool.query(queryText, [id]);
       
       // Check if any rows were deleted
-      return Array.isArray(result) && result.length > 0;
+      const success = result.rows && result.rows.length > 0;
+      console.log(`Delete operation result for DNS record ${id}: ${success ? 'Success' : 'Not found'}`);
+      return success;
     } catch (error) {
       console.error("Error in deleteDnsRecord:", error);
       return false;
