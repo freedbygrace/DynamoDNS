@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { Redirect, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,7 @@ const registerSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
-  organizationId: z.string().optional(),
+  customerId: z.string().optional(),
 });
 
 // Define LDAP login schema
@@ -49,7 +49,7 @@ interface AuthConfig {
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const { theme } = useTheme();
-  const { organizations, isLoading: orgsLoading } = useOrganization();
+  const { customers, isLoading: customersLoading } = useCustomer();
   const [location, setLocation] = useLocation();
   
   // Fetch authentication configuration

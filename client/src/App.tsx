@@ -20,14 +20,14 @@ import WebhookLogsPage from "@/pages/webhook-logs";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ThemeProvider } from "@/hooks/use-theme";
-import { OrganizationProvider } from "@/context/organization-context";
+import { CustomerProvider } from "@/context/customer-context";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/organizations" component={OrganizationsPage} />
+      <ProtectedRoute path="/customers" component={OrganizationsPage} />
       <ProtectedRoute path="/domains" component={DomainsPage} />
       <ProtectedRoute path="/metrics" component={MetricsPage} />
       <ProtectedRoute path="/history" component={HistoryPage} />
@@ -49,10 +49,10 @@ function App() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <OrganizationProvider>
+          <CustomerProvider>
             <Router />
             <Toaster />
-          </OrganizationProvider>
+          </CustomerProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
