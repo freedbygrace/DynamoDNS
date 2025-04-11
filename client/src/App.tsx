@@ -14,7 +14,7 @@ import RolesPage from "@/pages/roles";
 import GroupsPage from "@/pages/groups";
 import ProvidersPage from "@/pages/providers";
 import SettingsPage from "@/pages/settings";
-import OrganizationsPage from "@/pages/organizations";
+import CustomersPage from "@/pages/organizations";
 import WebhooksPage from "@/pages/webhooks";
 import WebhookLogsPage from "@/pages/webhook-logs";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -27,7 +27,7 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/customers" component={OrganizationsPage} />
+      <ProtectedRoute path="/customers" component={CustomersPage} />
       <ProtectedRoute path="/domains" component={DomainsPage} />
       <ProtectedRoute path="/metrics" component={MetricsPage} />
       <ProtectedRoute path="/history" component={HistoryPage} />
