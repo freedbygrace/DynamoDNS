@@ -317,7 +317,10 @@ export type InsertDomain = z.infer<typeof insertDomainSchema>;
 export type Domain = typeof domains.$inferSelect;
 
 export type InsertDnsRecord = z.infer<typeof insertDnsRecordSchema>;
-export type DnsRecord = typeof dnsRecords.$inferSelect;
+export type DnsRecord = typeof dnsRecords.$inferSelect & {
+  // Runtime property added by the API - not stored in database
+  currentIp?: string;
+};
 
 export type InsertProvider = z.infer<typeof insertProviderSchema>;
 export type Provider = typeof providers.$inferSelect;
