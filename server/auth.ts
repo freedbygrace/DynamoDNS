@@ -17,7 +17,7 @@ export const CONFIG = {
   LOCAL_AUTH_ENABLED: process.env.LOCAL_AUTH_ENABLED !== 'false', // Enabled by default
   DISABLE_REGISTRATION: process.env.ENABLE_REGISTRATION !== 'true', // Disabled by default
   DEFAULT_ADMIN_USERNAME: process.env.DEFAULT_ADMIN_USERNAME || 'admin',
-  DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'password',
+  DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
   DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com',
   
   // LDAP configuration
