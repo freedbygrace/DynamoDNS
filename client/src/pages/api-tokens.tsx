@@ -71,7 +71,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Key, MoreVertical, CalendarIcon, Copy, Info, Clock } from "lucide-react";
+import { Loader2, Key, MoreVertical, CalendarIcon, Copy, Eye, EyeOff, Info, Clock } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
 // Token form schema
@@ -224,18 +224,26 @@ export default function ApiTokensPage() {
   // Revoke token mutation
   const revokeTokenMutation = useMutation({
     mutationFn: async (tokenId: string) => {
-      await apiRequest("PATCH", `/api/api-tokens/${tokenId}`, { isActive: false });
+      const response = await apiRequest("PATCH", `/api/api-tokens/${tokenId}`, { isActive: false });
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Force refresh the tokens list
       queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentOrganization?.id] });
+      
+      // If we're viewing the token details dialog, update the selected token
+      if (isViewTokenDialogOpen && selectedToken && data.id === selectedToken.id) {
+        setSelectedToken(data);
+      }
+      
       setIsRevokeDialogOpen(false);
-      setSelectedToken(null);
       toast({
         title: "Token revoked",
         description: "The API token has been successfully revoked.",
       });
     },
     onError: (error) => {
+      console.error("Error revoking token:", error);
       toast({
         title: "Failed to revoke token",
         description: error.message,
@@ -788,14 +796,29 @@ export default function ApiTokensPage() {
                       "*".repeat(32)
                     )}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-2 right-2" 
-                    onClick={copySelectedTokenToClipboard}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute top-2 right-2 flex">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="mr-1"
+                      onClick={copySelectedTokenToClipboard}
+                      title="Copy token"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setViewingFullToken(!viewingFullToken)}
+                      title={viewingFullToken ? "Hide token" : "Show token"}
+                    >
+                      {viewingFullToken ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
               
