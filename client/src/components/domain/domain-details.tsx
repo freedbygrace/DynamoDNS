@@ -428,6 +428,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Full Domain</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>AutoIP</TableHead>
                   <TableHead>Content</TableHead>
@@ -455,6 +456,46 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                       ) : (
                         record.name
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {/* Full Domain Path with copy functionality */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 px-2 text-xs font-medium"
+                              onClick={() => {
+                                const fullDomain = record.name === "@" 
+                                  ? domain.name
+                                  : `${record.name}.${domain.name}`;
+                                navigator.clipboard.writeText(fullDomain);
+                                toast({
+                                  title: "Domain copied to clipboard",
+                                  description: fullDomain,
+                                  duration: 2000
+                                });
+                              }}
+                            >
+                              <span className="flex items-center gap-1 truncate max-w-[150px]">
+                                {record.name === "@" 
+                                  ? domain.name
+                                  : `${record.name}.${domain.name}`}
+                                <Copy className="h-3 w-3" />
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-medium">
+                              {record.name === "@" 
+                                ? domain.name
+                                : `${record.name}.${domain.name}`}
+                            </p>
+                            <p className="text-xs mt-1">Click to copy</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{record.type}</Badge>
