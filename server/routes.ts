@@ -991,6 +991,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle expiration date based on the expiresIn parameter
       const expiresIn = req.body.expiresIn || 'never';
       
+      console.log("Processing expiresIn:", expiresIn);
+      console.log("Full request body for debugging:", req.body);
+      
       if (expiresIn !== 'never') {
         const now = new Date();
         
@@ -1003,6 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const [year, month, day] = req.body.customDate.split('-').map(Number);
               
               if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                console.log("Invalid date components:", { year, month, day });
                 throw new Error("Invalid date format. Expected YYYY-MM-DD");
               }
               
@@ -1035,13 +1039,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               tokenData.expiresAt = customDate;
               console.log("Final custom expiration date:", customDate.toISOString());
             } else {
+              console.log("Missing customDate field in request");
               throw new Error("Custom date is required for custom expiration");
             }
           } catch (e) {
             console.error("Error parsing custom date:", e);
             return res.status(400).json({ 
               message: "Invalid custom date or time", 
-              details: e instanceof Error ? e.message : String(e)
+              details: e instanceof Error ? e.message : String(e),
+              requestBody: req.body
             });
           }
         } else {
