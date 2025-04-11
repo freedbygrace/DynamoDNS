@@ -373,7 +373,7 @@ export default function ApiTokensPage() {
                       </FormControl>
                       <SelectContent>
                         {/* System roles */}
-                        <SelectItem key="system-roles" value="" disabled className="text-muted-foreground">
+                        <SelectItem key="system-roles" value="__system_roles_header" disabled className="text-muted-foreground">
                           System Roles
                         </SelectItem>
                         {systemRoles.map((role) => (
@@ -388,7 +388,7 @@ export default function ApiTokensPage() {
                         {/* Custom roles */}
                         {customRoles.length > 0 && (
                           <>
-                            <SelectItem key="custom-roles" value="" disabled className="text-muted-foreground mt-2">
+                            <SelectItem key="custom-roles" value="__custom_roles_header" disabled className="text-muted-foreground mt-2">
                               Custom Roles
                             </SelectItem>
                             {customRoles.map((role) => (
