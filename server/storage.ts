@@ -523,6 +523,20 @@ export class MemStorage implements IStorage {
       console.log("No expiresAt provided in token data");
     }
     
+    // Make sure expiresAt is either a Date object or null
+    let finalExpiresAt: Date | null = null;
+    if (expiresAt) {
+      if (expiresAt instanceof Date) {
+        finalExpiresAt = expiresAt;
+      } else if (typeof expiresAt === 'string') {
+        try {
+          finalExpiresAt = new Date(expiresAt);
+        } catch (e) {
+          console.error("Could not convert expiresAt string to Date:", e);
+        }
+      }
+    }
+    
     const newToken: ApiToken = { 
       id: numId.toString(),
       name: token.name || "Unnamed Token",
@@ -532,7 +546,7 @@ export class MemStorage implements IStorage {
       role: token.role || 'readonly',
       createdBy: token.createdBy || "1",
       isActive: token.isActive ?? true,
-      expiresAt: expiresAt,
+      expiresAt: finalExpiresAt,
       createdAt
     };
     
@@ -546,7 +560,33 @@ export class MemStorage implements IStorage {
     const token = await this.getApiToken(id);
     if (!token) return undefined;
     
-    const updatedToken = { ...token, ...tokenData };
+    // Handle expiresAt specially to ensure it's a Date object or null
+    let finalExpiresAt = token.expiresAt;
+    if ('expiresAt' in tokenData) {
+      const newExpiresAt = tokenData.expiresAt;
+      if (newExpiresAt === null) {
+        finalExpiresAt = null;
+      } else if (newExpiresAt instanceof Date) {
+        finalExpiresAt = newExpiresAt;
+      } else if (typeof newExpiresAt === 'string') {
+        try {
+          finalExpiresAt = new Date(newExpiresAt);
+        } catch (e) {
+          console.error("Could not convert expiresAt string to Date:", e);
+        }
+      }
+      
+      // Remove expiresAt to prevent type issues
+      const { expiresAt, ...otherData } = tokenData;
+      tokenData = otherData;
+    }
+    
+    const updatedToken = { 
+      ...token, 
+      ...tokenData,
+      expiresAt: finalExpiresAt
+    };
+    
     this.apiTokensMap.set(numId, updatedToken);
     return updatedToken;
   }

@@ -79,7 +79,9 @@ const tokenFormSchema = z.object({
   role: z.string().min(1, "Role is required"),
   expiresIn: z.string().optional(),
   customDate: z.date().optional(),
-  customTime: z.string().optional(),
+  customTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Time must be in 24-hour format HH:MM"
+  }).optional(),
 }).refine((data) => {
   // If custom expiration is selected, a date must be provided
   if (data.expiresIn === 'custom' && !data.customDate) {
@@ -88,6 +90,19 @@ const tokenFormSchema = z.object({
   return true;
 }, {
   message: "Please select a date for the custom expiration",
+  path: ["customDate"]
+}).refine((data) => {
+  // If a custom date is provided, validate it's in the future
+  if (data.customDate) {
+    const now = new Date();
+    const dateOnly = new Date(data.customDate);
+    dateOnly.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    return dateOnly >= now;
+  }
+  return true;
+}, {
+  message: "Expiration date must be in the future",
   path: ["customDate"]
 });
 
