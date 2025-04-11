@@ -472,85 +472,52 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Creating DNS record with data:", JSON.stringify(record, null, 2));
       
-      // Try a simpler approach using drizzle API directly
-      // We need to map the properties to match the database column names
-      const recordData = {
-        domain_id: record.domainId,
-        name: record.name,
-        type: record.type,
-        content: record.content || '',
-        ttl: record.ttl || 3600,
-        priority: record.priority || 0,
-        is_active: record.isActive !== undefined ? record.isActive : true,
-        auto_update: record.isAutoIP !== undefined ? record.isAutoIP : false,
-        notes: record.notes || null,
-        last_updated: new Date(),
-        provider_record_id: record.providerRecordId || null
-      };
+      // Skip drizzle and use direct SQL query since we've had issues with schema mismatches
+      // Using a raw SQL query to ensure the data is inserted correctly
+      console.log("Using direct SQL query approach");
       
-      console.log("Inserting DNS record with:", JSON.stringify(recordData, null, 2));
+      // Convert the domainId to a string explicitly to avoid any type issues
+      const domainIdStr = String(record.domainId);
+      console.log(`Domain ID converted to string: '${domainIdStr}'`);
+      
+      const queryText = `
+        INSERT INTO dns_records (
+          domain_id, name, type, content, ttl, priority,
+          is_active, auto_update, notes, last_updated, provider_record_id
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+        ) 
+        RETURNING *
+      `;
+      
+      const params = [
+        domainIdStr,                                         // domain_id
+        record.name,                                         // name
+        record.type,                                         // type
+        record.content || '',                                // content
+        record.ttl || 3600,                                  // ttl
+        record.priority || 0,                                // priority
+        record.isActive !== undefined ? record.isActive : true,  // is_active
+        record.isAutoIP !== undefined ? record.isAutoIP : false, // auto_update
+        record.notes || null,                                // notes
+        new Date(),                                          // last_updated
+        record.providerRecordId || null                      // provider_record_id
+      ];
+      
+      console.log("Executing query with params:", JSON.stringify(params, null, 2));
       
       try {
-        // Insert using the drizzle query builder
-        const [newRecord] = await db.insert(dnsRecords)
-          .values(recordData)
-          .returning();
-          
-        console.log("New DNS record created:", JSON.stringify(newRecord, null, 2));
+        // Execute the query using the pool directly to bypass Drizzle
+        const { pool } = await import('./db');
+        const result = await pool.query(queryText, params);
         
-        // Convert from DB schema to application schema
-        return {
-          id: newRecord.id,
-          domainId: newRecord.domainId,
-          name: newRecord.name,
-          type: newRecord.type,
-          content: newRecord.content,
-          ttl: newRecord.ttl,
-          priority: newRecord.priority,
-          isActive: newRecord.isActive,
-          isAutoIP: newRecord.isAutoIP,
-          notes: newRecord.notes,
-          lastUpdated: newRecord.lastUpdated,
-          createdAt: newRecord.createdAt,
-          providerRecordId: newRecord.providerRecordId,
-          proxied: null // For frontend compatibility
-        };
-      } catch (drizzleError) {
-        console.error("Drizzle error creating DNS record:", drizzleError);
-        
-        // Fallback to SQL approach if drizzle approach fails
-        console.log("Falling back to SQL approach");
-        
-        const queryText = sql`
-          INSERT INTO dns_records (
-            domain_id, name, type, content, ttl, priority,
-            is_active, auto_update, notes, last_updated, provider_record_id
-          ) VALUES (
-            ${record.domainId},
-            ${record.name},
-            ${record.type},
-            ${record.content || ''},
-            ${record.ttl || 3600},
-            ${record.priority || 0},
-            ${record.isActive !== undefined ? record.isActive : true},
-            ${record.isAutoIP !== undefined ? record.isAutoIP : false},
-            ${record.notes || null},
-            ${new Date()},
-            ${record.providerRecordId || null}
-          ) 
-          RETURNING *
-        `;
-        
-        // Execute the query directly with SQL template literal
-        const result = await db.execute(queryText);
-        
-        if (!Array.isArray(result) || result.length === 0) {
+        if (!result.rows || result.rows.length === 0) {
           console.error("DNS record creation failed - empty result returned");
           throw new Error("Failed to create DNS record");
         }
         
-        const sqlRecord = result[0];
-        console.log("New DNS record created with SQL:", sqlRecord);
+        const sqlRecord = result.rows[0];
+        console.log("New DNS record created with raw SQL:", sqlRecord);
         
         // Map the SQL result to the expected DnsRecord type
         return {
@@ -568,6 +535,55 @@ export class DatabaseStorage implements IStorage {
           createdAt: sqlRecord.created_at,
           providerRecordId: sqlRecord.provider_record_id,
           proxied: null // For frontend compatibility
+        };
+      } catch (sqlError) {
+        console.error("SQL error creating DNS record:", sqlError);
+        
+        // Last resort - try with a completely different query approach
+        console.log("Trying one last SQL approach with a different query format");
+        
+        // Directly use pg's format for query parameters
+        const fallbackQuery = `
+          INSERT INTO dns_records
+          (domain_id, name, type, content, ttl, priority, is_active, auto_update, notes, last_updated, provider_record_id)
+          VALUES
+          ('${record.domainId}', '${record.name}', '${record.type}', '${record.content || ''}', 
+           ${record.ttl || 3600}, ${record.priority || 0}, 
+           ${record.isActive !== undefined ? record.isActive : true}, 
+           ${record.isAutoIP !== undefined ? record.isAutoIP : false}, 
+           ${record.notes ? `'${record.notes}'` : 'NULL'}, 
+           '${new Date().toISOString()}', 
+           ${record.providerRecordId ? `'${record.providerRecordId}'` : 'NULL'})
+          RETURNING *;
+        `;
+        
+        console.log("Fallback query:", fallbackQuery);
+        const { pool } = await import('./db');
+        const fallbackResult = await pool.query(fallbackQuery);
+        
+        if (!fallbackResult.rows || fallbackResult.rows.length === 0) {
+          console.error("DNS record creation failed in fallback - empty result");
+          throw new Error("Failed to create DNS record");
+        }
+        
+        const fallbackRecord = fallbackResult.rows[0];
+        console.log("New DNS record created with fallback SQL:", fallbackRecord);
+        
+        return {
+          id: fallbackRecord.id,
+          domainId: fallbackRecord.domain_id,
+          name: fallbackRecord.name,
+          type: fallbackRecord.type,
+          content: fallbackRecord.content,
+          ttl: fallbackRecord.ttl,
+          priority: fallbackRecord.priority,
+          isActive: fallbackRecord.is_active,
+          isAutoIP: fallbackRecord.auto_update,
+          notes: fallbackRecord.notes,
+          lastUpdated: fallbackRecord.last_updated,
+          createdAt: fallbackRecord.created_at,
+          providerRecordId: fallbackRecord.provider_record_id,
+          proxied: null
         };
       }
     } catch (error) {
