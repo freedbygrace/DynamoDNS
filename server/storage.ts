@@ -1,19 +1,22 @@
 import { 
   type User, type InsertUser, 
-  type Organization, type InsertOrganization,
+  type Customer, type InsertCustomer,
+  type CustomerUserAssignment, type InsertCustomerUserAssignment,
   type Domain, type InsertDomain,
+  type DomainCredentials, type InsertDomainCredentials,
   type DnsRecord, type InsertDnsRecord,
   type Provider, type InsertProvider,
   type ApiToken, type InsertApiToken,
+  type ApiTokenCustomerAccess, type InsertApiTokenCustomerAccess,
   type DnsHistory,
   type Webhook, type InsertWebhook,
   type WebhookDeliveryLog, type InsertWebhookDeliveryLog,
   type DnsMetric, type InsertDnsMetric,
-  type CustomRole, type InsertCustomRole,
-  type MemberType
+  type CustomRole, type InsertCustomRole
 } from "@shared/schema";
 import session from "express-session";
 import { DatabaseStorage } from "./database-storage";
+import { ImprovedDatabaseStorage } from "./improved-database-storage";
 
 export interface IStorage {
   // User management
@@ -24,22 +27,32 @@ export interface IStorage {
   updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   
-  // Organization management
-  getOrganization(id: string): Promise<Organization | undefined>;
-  getOrganizations(): Promise<Organization[]>;
-  createOrganization(org: InsertOrganization): Promise<Organization>;
-  updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
-  deleteOrganization(id: string): Promise<boolean>;
+  // Customer management
+  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomers(): Promise<Customer[]>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  deleteCustomer(id: string): Promise<boolean>;
   
-  // Group management has been removed
+  // Customer-User assignments
+  getCustomerUsers(customerId: string): Promise<User[]>;
+  getUserCustomers(userId: string): Promise<Customer[]>;
+  assignUserToCustomer(assignment: InsertCustomerUserAssignment): Promise<CustomerUserAssignment>;
+  updateUserCustomerRole(customerId: string, userId: string, role: string): Promise<CustomerUserAssignment | undefined>;
+  removeUserFromCustomer(customerId: string, userId: string): Promise<boolean>;
   
   // Domain management
   getDomain(id: string): Promise<Domain | undefined>;
-  getDomainsByOrganization(organizationId: string): Promise<Domain[]>;
+  getDomainsByCustomer(customerId: string): Promise<Domain[]>;
   getAllDomains(): Promise<Domain[]>;
   createDomain(domain: InsertDomain): Promise<Domain>;
   updateDomain(id: string, domain: Partial<InsertDomain>): Promise<Domain | undefined>;
   deleteDomain(id: string): Promise<boolean>;
+  
+  // Domain credentials management
+  getDomainCredentials(domainId: string): Promise<DomainCredentials | undefined>;
+  createDomainCredentials(credentials: InsertDomainCredentials): Promise<DomainCredentials>;
+  updateDomainCredentials(domainId: string, credentials: Partial<InsertDomainCredentials>): Promise<DomainCredentials | undefined>;
   
   // DNS Record management
   getDnsRecord(id: string): Promise<DnsRecord | undefined>;
@@ -58,10 +71,16 @@ export interface IStorage {
   // API Token management
   getApiToken(id: string): Promise<ApiToken | undefined>;
   getApiTokenByToken(token: string): Promise<ApiToken | undefined>;
-  getApiTokensByOrganization(organizationId: string): Promise<ApiToken[]>;
+  getApiTokensByCustomer(customerId: string): Promise<ApiToken[]>;
+  getApiTokens(): Promise<ApiToken[]>;
   createApiToken(token: InsertApiToken): Promise<ApiToken>;
   updateApiToken(id: string, token: Partial<InsertApiToken>): Promise<ApiToken | undefined>;
   deleteApiToken(id: string): Promise<boolean>;
+  
+  // API Token Customer Access
+  getApiTokenCustomerAccess(tokenId: string): Promise<ApiTokenCustomerAccess[]>;
+  addApiTokenCustomerAccess(access: InsertApiTokenCustomerAccess): Promise<ApiTokenCustomerAccess>;
+  removeApiTokenCustomerAccess(tokenId: string, customerId: string): Promise<boolean>;
   
   // DNS History
   addDnsHistory(recordId: string, action: string, previousValue?: string, newValue?: string, userId?: string): Promise<DnsHistory>;
@@ -70,7 +89,7 @@ export interface IStorage {
   
   // Webhook management
   getWebhook(id: string): Promise<Webhook | undefined>;
-  getWebhooksByOrganization(organizationId: string): Promise<Webhook[]>;
+  getWebhooksByCustomer(customerId: string): Promise<Webhook[]>;
   createWebhook(webhook: InsertWebhook): Promise<Webhook>;
   updateWebhook(id: string, webhook: Partial<InsertWebhook>): Promise<Webhook | undefined>;
   deleteWebhook(id: string): Promise<boolean>;
@@ -927,4 +946,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use the improved storage implementation
+export const storage = new ImprovedDatabaseStorage();

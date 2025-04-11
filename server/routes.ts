@@ -11,14 +11,17 @@ import {
   insertDnsRecordSchema,
   insertProviderSchema,
   insertApiTokenSchema,
-  insertOrganizationSchema,
+  insertCustomerSchema, 
   insertWebhookSchema,
   insertDnsMetricSchema,
   insertCustomRoleSchema,
+  insertCustomerUserAssignmentSchema,
+  insertDomainCredentialsSchema,
+  insertApiTokenCustomerAccessSchema,
   recordTypes,
   providerTypes,
   customRoles,
-  memberTypes
+  systemRoles
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { getProviderForDomain } from './providers';
@@ -119,8 +122,8 @@ async function triggerDnsWebhooks(
     const domain = await storage.getDomain(domainId);
     if (!domain) return;
     
-    // Get webhooks for this organization
-    const webhooks = await storage.getWebhooksByOrganization(domain.organizationId);
+    // Get webhooks for this customer
+    const webhooks = await storage.getWebhooksByCustomer(domain.customerId);
     
     // Filter webhooks that have subscribed to DNS events
     const dnsWebhooks = webhooks.filter(webhook => 
@@ -153,9 +156,9 @@ async function triggerDnsWebhooks(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication routes
-  setupAuth(app);
-  
+  // Create HTTP server
+  const httpServer = createServer(app);
+
   // Add public IP endpoint for the frontend
   app.get('/api/public-ip', async (req, res) => {
     try {
@@ -174,6 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to get public IP address' });
     }
   });
+  
+  return httpServer;
 
   // DNS Records routes
   app.get("/api/dns-records", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {

@@ -3,14 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-// Users & Authentication
-export const organizations = pgTable("organizations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
+// Users & Authentication - Independent of customers
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   username: text("username").notNull().unique(),
@@ -18,39 +11,63 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   fullName: text("full_name"),
   role: text("role").default("user").notNull(),
-  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const usersRelations = relations(users, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [users.organizationId],
-    references: [organizations.id],
-  }),
-}));
-
-// We'll define this after all tables are declared
-
-// DNS Management
-export const providers = pgTable("providers", {
+// Customers - Replaces organizations
+export const customers = pgTable("customers", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(),
-  credentials: jsonb("credentials"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Customer-User Assignment - Many-to-many relationship
+export const customerUserAssignments = pgTable("customer_user_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").default("user").notNull(), // Role specific to this customer assignment
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  // Unique constraint to prevent duplicate assignments
+  uniqueAssignment: unique().on(t.customerId, t.userId),
+}));
+
+// DNS Management - Providers are independent entities
+export const providers = pgTable("providers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Domains associated with customers
 export const domains = pgTable("domains", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  providerId: uuid("provider_id").notNull().references(() => providers.id),
   isActive: boolean("is_active").default(true).notNull(),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Domain credentials - each domain has its own API tokens and provider-specific credentials
+export const domainCredentials = pgTable("domain_credentials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  domainId: uuid("domain_id").notNull().references(() => domains.id, { onDelete: "cascade" }),
+  apiToken: text("api_token"), // Provider API token
+  accountId: text("account_id"), // Provider account ID
+  zoneId: text("zone_id"), // Provider zone ID (e.g., Cloudflare)
+  otherCredentials: jsonb("other_credentials"), // Other provider-specific credentials
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// DNS records associated with domains
 export const dnsRecords = pgTable("dns_records", {
   id: uuid("id").defaultRandom().primaryKey(),
   domainId: uuid("domain_id").notNull().references(() => domains.id, { onDelete: "cascade" }),
@@ -62,12 +79,13 @@ export const dnsRecords = pgTable("dns_records", {
   providerRecordId: text("provider_record_id"),
   notes: text("notes"),
   isActive: boolean("is_active").default(true).notNull(),
-  isAutoIP: boolean("auto_update").default(false).notNull(), // renamed to match database column
+  isAutoIP: boolean("auto_update").default(false).notNull(),
   proxied: boolean("proxied").default(false), // For Cloudflare proxy setting
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// DNS history for record changes
 export const dnsHistory = pgTable("dns_history", {
   id: uuid("id").defaultRandom().primaryKey(),
   recordId: uuid("record_id").notNull().references(() => dnsRecords.id, { onDelete: "cascade" }),
@@ -78,26 +96,35 @@ export const dnsHistory = pgTable("dns_history", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
-// API Tokens
+// API Tokens for system access (not provider access)
 export const apiTokens = pgTable("api_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   token: text("token").notNull().unique(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  permissions: text("permissions").array(),
-  role: text("role").default("readonly").notNull(), // Adding explicit role like users have
+  role: text("role").default("readonly").notNull(),
   createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at"),
 });
 
-// Webhooks
+// API token customer access - for granular customer permissions
+export const apiTokenCustomerAccess = pgTable("api_token_customer_access", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tokenId: uuid("token_id").notNull().references(() => apiTokens.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  // Unique constraint to prevent duplicate access
+  uniqueAccess: unique().on(t.tokenId, t.customerId),
+}));
+
+// Webhooks associated with customers
 export const webhooks = pgTable("webhooks", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   url: text("url").notNull(),
-  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
   secret: text("secret"),
   events: text("events").array().notNull(),
   isActive: boolean("is_active").default(true).notNull(),
@@ -106,7 +133,7 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Webhook delivery logs for tracking delivery status and history
+// Webhook delivery logs
 export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
   webhookId: uuid("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
@@ -121,19 +148,19 @@ export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Performance metrics for historical data and trends
+// Performance metrics
 export const dnsMetrics = pgTable("dns_metrics", {
   id: uuid("id").defaultRandom().primaryKey(),
   domainId: uuid("domain_id").references(() => domains.id, { onDelete: "cascade" }),
   recordId: uuid("record_id").references(() => dnsRecords.id, { onDelete: "cascade" }),
-  metricType: text("metric_type").notNull(), // response_time, uptime, propagation, etc.
-  value: jsonb("value").notNull(), // Flexible metric value storage
-  source: text("source"), // Source of the metric (provider, third-party, etc.)
-  tags: text("tags").array(), // For additional filtering/grouping
+  metricType: text("metric_type").notNull(),
+  value: jsonb("value").notNull(),
+  source: text("source"),
+  tags: text("tags").array(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
-// Custom roles table for user-defined roles beyond system defaults
+// Custom roles
 export const customRoles = pgTable("custom_roles", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull().unique(),
@@ -144,8 +171,6 @@ export const customRoles = pgTable("custom_roles", {
   createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "set null" }),
 });
 
-// Note: Groups, GroupMembers, and GroupRoles tables have been removed in this version
-
 // Schema Validation
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -153,24 +178,46 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   fullName: true,
   role: true,
-  organizationId: true,
 });
 
-export const insertOrganizationSchema = createInsertSchema(organizations).pick({
+export const insertCustomerSchema = createInsertSchema(customers).pick({
   name: true,
   isActive: true,
+});
+
+export const insertCustomerUserAssignmentSchema = createInsertSchema(customerUserAssignments).pick({
+  customerId: true,
+  userId: true,
+  role: true,
 });
 
 export const insertDomainSchema = createInsertSchema(domains)
   .pick({
     name: true,
-    organizationId: true,
+    customerId: true,
     providerId: true,
     isActive: true,
   })
   .extend({
     // Override providerId to make it optional
     providerId: z.string().uuid().optional(),
+  });
+
+export const insertDomainCredentialsSchema = createInsertSchema(domainCredentials)
+  .pick({
+    domainId: true,
+    apiToken: true,
+    accountId: true,
+    zoneId: true,
+    otherCredentials: true,
+    isActive: true,
+  })
+  .extend({
+    // Make fields optional with proper types
+    apiToken: z.string().optional(),
+    accountId: z.string().optional(),
+    zoneId: z.string().optional(),
+    otherCredentials: z.record(z.unknown()).optional(),
   });
 
 export const insertDnsRecordSchema = createInsertSchema(dnsRecords)
@@ -198,7 +245,6 @@ export const insertDnsRecordSchema = createInsertSchema(dnsRecords)
 export const insertProviderSchema = createInsertSchema(providers).pick({
   name: true,
   type: true,
-  credentials: true,
   isActive: true,
 });
 
@@ -206,8 +252,6 @@ export const insertProviderSchema = createInsertSchema(providers).pick({
 export const insertApiTokenSchema = z.object({
   name: z.string().optional(),
   token: z.string().optional(),
-  organizationId: z.string().optional(),
-  permissions: z.array(z.string()).optional(),
   role: z.string().optional(),
   createdBy: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -216,6 +260,13 @@ export const insertApiTokenSchema = z.object({
   expiresIn: z.string().optional(),
   customDate: z.string().optional(),
   customTime: z.string().optional(),
+  // Customer access array
+  customerIds: z.array(z.string()).optional(),
+});
+
+export const insertApiTokenCustomerAccessSchema = createInsertSchema(apiTokenCustomerAccess).pick({
+  tokenId: true,
+  customerId: true,
 });
 
 export const insertCustomRoleSchema = createInsertSchema(customRoles).pick({
@@ -226,12 +277,10 @@ export const insertCustomRoleSchema = createInsertSchema(customRoles).pick({
   createdBy: true,
 });
 
-// Note: Group-related insert schemas have been removed in this version
-
 export const insertWebhookSchema = createInsertSchema(webhooks).pick({
   name: true,
   url: true,
-  organizationId: true,
+  customerId: true,
   secret: true,
   events: true,
   isActive: true,
@@ -259,16 +308,21 @@ export const insertDnsMetricSchema = createInsertSchema(dnsMetrics).pick({
   tags: true,
 });
 
-
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
-export type Organization = typeof organizations.$inferSelect;
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type Customer = typeof customers.$inferSelect;
+
+export type InsertCustomerUserAssignment = z.infer<typeof insertCustomerUserAssignmentSchema>;
+export type CustomerUserAssignment = typeof customerUserAssignments.$inferSelect;
 
 export type InsertDomain = z.infer<typeof insertDomainSchema>;
 export type Domain = typeof domains.$inferSelect;
+
+export type InsertDomainCredentials = z.infer<typeof insertDomainCredentialsSchema>;
+export type DomainCredentials = typeof domainCredentials.$inferSelect;
 
 export type InsertDnsRecord = z.infer<typeof insertDnsRecordSchema>;
 export type DnsRecord = typeof dnsRecords.$inferSelect & {
@@ -282,11 +336,13 @@ export type Provider = typeof providers.$inferSelect;
 export type InsertApiToken = z.infer<typeof insertApiTokenSchema>;
 export type ApiToken = typeof apiTokens.$inferSelect;
 
+export type InsertApiTokenCustomerAccess = z.infer<typeof insertApiTokenCustomerAccessSchema>;
+export type ApiTokenCustomerAccess = typeof apiTokenCustomerAccess.$inferSelect;
+
 export type DnsHistory = typeof dnsHistory.$inferSelect;
 export type DnsMetric = typeof dnsMetrics.$inferSelect;
 export type CustomRole = typeof customRoles.$inferSelect;
 
-// Note: Group-related types have been removed in this version
 export type InsertCustomRole = z.infer<typeof insertCustomRoleSchema>;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 export type Webhook = typeof webhooks.$inferSelect;
@@ -302,10 +358,6 @@ export type SystemRole = typeof systemRoles[number];
 // User roles can be system roles or custom roles
 export type UserRole = SystemRole | string;
 
-// Define member types (group type removed)
-export const memberTypes = ['user', 'organization'] as const;
-export type MemberType = typeof memberTypes[number];
-
 // Provider Types
 export const providerTypes = ['cloudflare', 'route53', 'godaddy', 'other'] as const;
 export type ProviderType = typeof providerTypes[number];
@@ -315,23 +367,51 @@ export const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'NS', 'CAA
 export type RecordType = typeof recordTypes[number];
 
 // Define table relations
-export const organizationsRelations = relations(organizations, ({ many }) => ({
-  users: many(users),
+export const usersRelations = relations(users, ({ many }) => ({
+  customerAssignments: many(customerUserAssignments),
+  createdApiTokens: many(apiTokens, { relationName: "createdTokens" }),
+  createdWebhooks: many(webhooks, { relationName: "createdWebhooks" }),
+  createdCustomRoles: many(customRoles, { relationName: "createdRoles" }),
+  dnsHistoryEntries: many(dnsHistory, { relationName: "historyEntries" }),
+}));
+
+export const customersRelations = relations(customers, ({ many }) => ({
+  userAssignments: many(customerUserAssignments),
   domains: many(domains),
-  apiTokens: many(apiTokens),
+  tokenAccess: many(apiTokenCustomerAccess),
   webhooks: many(webhooks),
 }));
 
+export const customerUserAssignmentsRelations = relations(customerUserAssignments, ({ one }) => ({
+  customer: one(customers, {
+    fields: [customerUserAssignments.customerId],
+    references: [customers.id],
+  }),
+  user: one(users, {
+    fields: [customerUserAssignments.userId],
+    references: [users.id],
+  }),
+}));
+
 export const domainsRelations = relations(domains, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [domains.organizationId],
-    references: [organizations.id],
+  customer: one(customers, {
+    fields: [domains.customerId],
+    references: [customers.id],
   }),
   provider: one(providers, {
     fields: [domains.providerId],
     references: [providers.id],
   }),
+  credentials: many(domainCredentials),
   dnsRecords: many(dnsRecords),
+  metrics: many(dnsMetrics),
+}));
+
+export const domainCredentialsRelations = relations(domainCredentials, ({ one }) => ({
+  domain: one(domains, {
+    fields: [domainCredentials.domainId],
+    references: [domains.id],
+  }),
 }));
 
 export const dnsRecordsRelations = relations(dnsRecords, ({ one, many }) => ({
@@ -339,8 +419,8 @@ export const dnsRecordsRelations = relations(dnsRecords, ({ one, many }) => ({
     fields: [dnsRecords.domainId],
     references: [domains.id],
   }),
-  // Provider is now referenced through the domain, not directly
   history: many(dnsHistory),
+  metrics: many(dnsMetrics),
 }));
 
 export const dnsHistoryRelations = relations(dnsHistory, ({ one }) => ({
@@ -369,25 +449,35 @@ export const providersRelations = relations(providers, ({ many }) => ({
   domains: many(domains),
 }));
 
-export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [apiTokens.organizationId],
-    references: [organizations.id],
-  }),
+export const apiTokensRelations = relations(apiTokens, ({ one, many }) => ({
   creator: one(users, {
     fields: [apiTokens.createdBy],
     references: [users.id],
+    relationName: "createdTokens",
+  }),
+  customerAccess: many(apiTokenCustomerAccess),
+}));
+
+export const apiTokenCustomerAccessRelations = relations(apiTokenCustomerAccess, ({ one }) => ({
+  token: one(apiTokens, {
+    fields: [apiTokenCustomerAccess.tokenId],
+    references: [apiTokens.id],
+  }),
+  customer: one(customers, {
+    fields: [apiTokenCustomerAccess.customerId],
+    references: [customers.id],
   }),
 }));
 
 export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [webhooks.organizationId],
-    references: [organizations.id],
+  customer: one(customers, {
+    fields: [webhooks.customerId],
+    references: [customers.id],
   }),
   creator: one(users, {
     fields: [webhooks.createdBy],
     references: [users.id],
+    relationName: "createdWebhooks",
   }),
   deliveryLogs: many(webhookDeliveryLogs),
 }));
@@ -399,13 +489,10 @@ export const webhookDeliveryLogsRelations = relations(webhookDeliveryLogs, ({ on
   }),
 }));
 
-
-// Custom roles relations
 export const customRolesRelations = relations(customRoles, ({ one }) => ({
   creator: one(users, {
     fields: [customRoles.createdBy],
     references: [users.id],
+    relationName: "createdRoles",
   }),
 }));
-
-// Note: Group-related relations have been removed in this version
