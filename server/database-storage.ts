@@ -394,7 +394,7 @@ export class DatabaseStorage implements IStorage {
       const queryText = `
         SELECT 
           id, domain_id, name, type, content, ttl, priority,
-          provider_record_id, is_active, auto_update, notes, last_updated, created_at
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at, proxied
         FROM dns_records 
         WHERE id = $1
       `;
@@ -424,7 +424,7 @@ export class DatabaseStorage implements IStorage {
         notes: record.notes,
         lastUpdated: record.last_updated,
         createdAt: record.created_at,
-        proxied: null // Field for frontend compatibility
+        proxied: record.proxied // Use proxied value from database
       };
     } catch (error) {
       console.error("Error in getDnsRecord:", error);
@@ -441,7 +441,7 @@ export class DatabaseStorage implements IStorage {
       const queryText = `
         SELECT 
           id, domain_id, name, type, content, ttl, priority,
-          provider_record_id, is_active, auto_update, notes, last_updated, created_at
+          provider_record_id, is_active, auto_update, notes, last_updated, created_at, proxied
         FROM dns_records 
         WHERE domain_id = $1
       `;
@@ -465,7 +465,7 @@ export class DatabaseStorage implements IStorage {
         notes: record.notes,
         lastUpdated: record.last_updated,
         createdAt: record.created_at,
-        proxied: null // Add missing field for frontend compatibility
+        proxied: record.proxied // Use the proxied value from the database
       }));
       
       console.log("Mapped records:", JSON.stringify(mappedRecords, null, 2));
@@ -491,9 +491,9 @@ export class DatabaseStorage implements IStorage {
       const queryText = `
         INSERT INTO dns_records (
           domain_id, name, type, content, ttl, priority,
-          is_active, auto_update, notes, last_updated, provider_record_id
+          is_active, auto_update, notes, last_updated, provider_record_id, proxied
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         ) 
         RETURNING *
       `;
@@ -509,7 +509,8 @@ export class DatabaseStorage implements IStorage {
         record.isAutoIP !== undefined ? record.isAutoIP : false, // auto_update
         record.notes || null,                                // notes
         new Date(),                                          // last_updated
-        record.providerRecordId || null                      // provider_record_id
+        record.providerRecordId || null,                     // provider_record_id
+        record.proxied !== undefined ? record.proxied : null // proxied (Cloudflare-specific)
       ];
       
       console.log("Executing query with params:", JSON.stringify(params, null, 2));
@@ -542,7 +543,7 @@ export class DatabaseStorage implements IStorage {
           lastUpdated: sqlRecord.last_updated,
           createdAt: sqlRecord.created_at,
           providerRecordId: sqlRecord.provider_record_id,
-          proxied: null // For frontend compatibility
+          proxied: sqlRecord.proxied // Use proxied value from database
         };
       } catch (sqlError) {
         console.error("SQL error creating DNS record:", sqlError);
@@ -553,7 +554,7 @@ export class DatabaseStorage implements IStorage {
         // Directly use pg's format for query parameters
         const fallbackQuery = `
           INSERT INTO dns_records
-          (domain_id, name, type, content, ttl, priority, is_active, auto_update, notes, last_updated, provider_record_id)
+          (domain_id, name, type, content, ttl, priority, is_active, auto_update, notes, last_updated, provider_record_id, proxied)
           VALUES
           ('${record.domainId}', '${record.name}', '${record.type}', '${record.content || ''}', 
            ${record.ttl || 3600}, ${record.priority || 0}, 
@@ -561,7 +562,8 @@ export class DatabaseStorage implements IStorage {
            ${record.isAutoIP !== undefined ? record.isAutoIP : false}, 
            ${record.notes ? `'${record.notes}'` : 'NULL'}, 
            '${new Date().toISOString()}', 
-           ${record.providerRecordId ? `'${record.providerRecordId}'` : 'NULL'})
+           ${record.providerRecordId ? `'${record.providerRecordId}'` : 'NULL'},
+           ${record.proxied !== undefined ? record.proxied : 'NULL'})
           RETURNING *;
         `;
         
@@ -591,7 +593,7 @@ export class DatabaseStorage implements IStorage {
           lastUpdated: fallbackRecord.last_updated,
           createdAt: fallbackRecord.created_at,
           providerRecordId: fallbackRecord.provider_record_id,
-          proxied: null
+          proxied: fallbackRecord.proxied // Use proxied value from database
         };
       }
     } catch (error) {
