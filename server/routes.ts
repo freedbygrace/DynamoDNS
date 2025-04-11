@@ -974,100 +974,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a random token
       const tokenValue = randomBytes(32).toString('hex');
       
-      // Extract fields from request body, with defaults where needed
-      const name = req.body.name || "Unnamed Token";
-      const role = req.body.role || "readonly";
-      const organizationId = req.body.organizationId || "1";
-      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
-      
-      // Set default permissions based on the role
-      let permissions = [];
-      if (role === 'admin') {
-        permissions = ['admin', 'manager', 'user', 'readonly'];
-      } else if (role === 'manager') {
-        permissions = ['manager', 'user', 'readonly'];
-      } else if (role === 'user') {
-        permissions = ['user', 'readonly'];
-      } else {
-        permissions = ['readonly'];
-      }
-      
-      // Create token data as a plain object (bypass schema validation)
-      const tokenData = {
-        name: name,
+      // Get data directly from the form
+      let tokenData: any = {
+        // Required fields
+        name: req.body.name || "Unnamed Token",
         token: tokenValue,
-        organizationId: organizationId,
-        permissions: permissions,
-        role: role,
-        createdBy: req.user?.id || '1',
-        isActive: isActive
+        organizationId: req.body.organizationId || "1",
+        role: req.body.role || "readonly",
+        createdBy: req.user?.id || "1",
+        
+        // Optional fields
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        permissions: [] // Will be populated in storage.ts
       };
       
-      // Handle expiration date directly from form data
+      // Handle expiration date
       if (req.body.expiresIn && req.body.expiresIn !== 'never') {
         const now = new Date();
         
         if (req.body.expiresIn === 'custom' && req.body.customDate) {
-          // For custom date/time
           try {
+            console.log("Custom date received:", req.body.customDate);
+            console.log("Custom time received:", req.body.customTime || "none");
+            
+            // Create date from input
             const customDate = new Date(req.body.customDate);
+            console.log("Parsed customDate:", customDate);
             
             // If time was selected, add it to the date
             if (req.body.customTime) {
               const [hours, minutes] = req.body.customTime.split(':').map(Number);
               if (!isNaN(hours) && !isNaN(minutes)) {
                 customDate.setHours(hours, minutes, 0, 0);
+                console.log(`Setting time to ${hours}:${minutes}`);
               } else {
                 customDate.setHours(23, 59, 59, 999);
+                console.log("Invalid time format, setting to end of day");
               }
             } else {
               customDate.setHours(23, 59, 59, 999);
+              console.log("No time specified, setting to end of day");
             }
             
             tokenData.expiresAt = customDate;
-            console.log("Custom expiration date set to:", customDate);
+            console.log("Final custom expiration date:", customDate);
           } catch (e) {
             console.error("Error parsing custom date:", e);
           }
         } else {
           // For preset expiration options
-          let daysToAdd = 0;
+          let expirationDate: Date | null = null;
           
           switch (req.body.expiresIn) {
             case '1hour':
-              tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 60 * 60 * 1000);
               break;
             case '1day':
-              tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
               break;
             case '7days':
-              tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
               break;
             case '30days':
-              tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
               break;
             case '90days':
-              tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
               break;
             case '1year':
-              tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+              expirationDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
               break;
           }
+          
+          if (expirationDate) {
+            tokenData.expiresAt = expirationDate;
+            console.log(`Setting expiration to ${req.body.expiresIn}:`, expirationDate);
+          }
         }
+      } else {
+        console.log("No expiration set (never expires)");
       }
       
-      console.log("Final token data for storage:", tokenData);
+      console.log("Final token data for storage:", JSON.stringify(tokenData, null, 2));
       
-      // Skip schema validation, call storage directly
+      // Pass data directly to storage
       const token = await storage.createApiToken(tokenData);
+      console.log("Token created successfully:", JSON.stringify(token, null, 2));
       
       // Return the full token only on creation
       res.status(201).json(token);
     } catch (error) {
       console.error("Error creating API token:", error);
+      // Return detailed error to help debugging
       res.status(500).json({ 
         message: "Error creating token", 
-        details: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       });
     }
   });

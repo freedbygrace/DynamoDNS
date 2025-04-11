@@ -480,21 +480,56 @@ export class MemStorage implements IStorage {
       .filter(token => token.organizationId === organizationId);
   }
   
-  async createApiToken(token: InsertApiToken): Promise<ApiToken> {
+  async createApiToken(token: any): Promise<ApiToken> {
+    console.log("Storage createApiToken received:", JSON.stringify(token, null, 2));
     const numId = this.apiTokenIdCounter++;
     const createdAt = new Date();
+    
+    // Generate default permissions if none provided
+    let permissions: string[] = [];
+    if (token.permissions && Array.isArray(token.permissions)) {
+      permissions = token.permissions;
+    } else if (token.role) {
+      // Default permissions based on role if not explicitly provided
+      if (token.role === 'admin') {
+        permissions = ['admin', 'manager', 'user', 'readonly'];
+      } else if (token.role === 'manager') {
+        permissions = ['manager', 'user', 'readonly'];
+      } else if (token.role === 'user') {
+        permissions = ['user', 'readonly'];
+      } else {
+        permissions = ['readonly'];
+      }
+    }
+    
+    // Handle expiresAt
+    let expiresAt = null;
+    if (token.expiresAt) {
+      if (token.expiresAt instanceof Date) {
+        expiresAt = token.expiresAt;
+      } else if (typeof token.expiresAt === 'string') {
+        try {
+          expiresAt = new Date(token.expiresAt);
+        } catch (e) {
+          console.error("Failed to parse expiresAt date string:", token.expiresAt);
+        }
+      }
+    }
+    
     const newToken: ApiToken = { 
       id: numId.toString(),
-      name: token.name,
-      token: token.token,
-      organizationId: token.organizationId,
-      permissions: token.permissions ?? null,
+      name: token.name || "Unnamed Token",
+      token: token.token || "test_token_" + numId,
+      organizationId: token.organizationId || "1",
+      permissions: permissions,
       role: token.role || 'readonly',
-      createdBy: token.createdBy,
+      createdBy: token.createdBy || "1",
       isActive: token.isActive ?? true,
-      expiresAt: token.expiresAt ?? null,
+      expiresAt: expiresAt,
       createdAt
     };
+    
+    console.log("Storing new token:", JSON.stringify(newToken, null, 2));
     this.apiTokensMap.set(numId, newToken);
     return newToken;
   }
