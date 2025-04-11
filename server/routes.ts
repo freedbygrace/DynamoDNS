@@ -615,78 +615,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
-  // Organizations
-  app.get("/api/organizations", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+  // Customers (previously organizations)
+  app.get("/api/customers", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
     try {
-      const organizations = await storage.getOrganizations();
-      res.json(organizations);
+      const customers = await storage.getCustomers();
+      res.json(customers);
     } catch (error) {
-      console.error("Error fetching organizations:", error);
+      console.error("Error fetching customers:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
-  app.get("/api/organizations/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+  app.get("/api/customers/:id", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const organization = await storage.getOrganization(id);
+      const customer = await storage.getCustomer(req.params.id);
       
-      if (!organization) {
-        return res.status(404).json({ message: "Organization not found" });
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
       }
       
-      res.json(organization);
+      res.json(customer);
     } catch (error) {
-      console.error("Error fetching organization:", error);
+      console.error("Error fetching customer:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
-  app.post("/api/organizations", requireRole(["admin"]), async (req, res) => {
+  app.post("/api/customers", requireRole(["admin"]), async (req, res) => {
     try {
-      const validatedData = insertOrganizationSchema.parse(req.body);
-      const organization = await storage.createOrganization(validatedData);
-      res.status(201).json(organization);
+      const validatedData = insertCustomerSchema.parse(req.body);
+      const customer = await storage.createCustomer(validatedData);
+      res.status(201).json(customer);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
-        console.error("Error creating organization:", error);
+        console.error("Error creating customer:", error);
         res.status(500).json({ message: "Internal server error" });
       }
     }
   });
 
-  app.put("/api/organizations/:id", requireRole(["admin"]), async (req, res) => {
+  app.put("/api/customers/:id", requireRole(["admin"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertOrganizationSchema.partial().parse(req.body);
+      const validatedData = insertCustomerSchema.partial().parse(req.body);
       
-      const updatedOrganization = await storage.updateOrganization(id, validatedData);
+      const updatedCustomer = await storage.updateCustomer(req.params.id, validatedData);
       
-      if (!updatedOrganization) {
-        return res.status(404).json({ message: "Organization not found" });
+      if (!updatedCustomer) {
+        return res.status(404).json({ message: "Customer not found" });
       }
       
-      res.json(updatedOrganization);
+      res.json(updatedCustomer);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Validation error", errors: error.errors });
       } else {
-        console.error("Error updating organization:", error);
+        console.error("Error updating customer:", error);
         res.status(500).json({ message: "Internal server error" });
       }
     }
   });
 
-  app.delete("/api/organizations/:id", requireRole(["admin"]), async (req, res) => {
+  app.delete("/api/customers/:id", requireRole(["admin"]), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteOrganization(id);
+      const deleted = await storage.deleteCustomer(req.params.id);
       
       if (!deleted) {
-        return res.status(404).json({ message: "Organization not found" });
+        return res.status(404).json({ message: "Customer not found" });
       }
+      
+      // For backward compatibility - maintain the old API endpoints
+      app.get("/api/organizations", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+        try {
+          const customers = await storage.getCustomers();
+          res.json(customers);
+        } catch (error) {
+          console.error("Error fetching organizations (customers):", error);
+          res.status(500).json({ message: "Internal server error" });
+        }
+      });
       
       res.status(204).end();
     } catch (error) {

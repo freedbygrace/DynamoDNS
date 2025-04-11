@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { OrganizationSelector } from "@/components/shared/organization-selector";
+import { CustomerSelector } from "@/components/shared/customer-selector";
 import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
@@ -33,8 +33,8 @@ export function Sidebar() {
       icon: <LayoutDashboard className="w-5 h-5 mr-3" />,
     },
     {
-      title: "Organizations",
-      href: "/organizations",
+      title: "Customers",
+      href: "/customers",
       icon: <Users className="w-5 h-5 mr-3" />,
     },
     {
@@ -124,9 +124,9 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Organization Selector */}
+      {/* Customer Selector */}
       <div className="px-4 py-2">
-        <OrganizationSelector />
+        <CustomerSelector />
       </div>
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">

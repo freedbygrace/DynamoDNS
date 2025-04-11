@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { OrganizationSelector } from "@/components/shared/organization-selector";
+import { CustomerSelector } from "@/components/shared/customer-selector";
 import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
@@ -139,9 +139,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             </button>
           </div>
           
-          {/* Organization Selector */}
+          {/* Customer Selector */}
           <div className="px-4 py-2">
-            <OrganizationSelector />
+            <CustomerSelector />
           </div>
 
           <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
