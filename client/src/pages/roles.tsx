@@ -19,6 +19,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -141,30 +146,38 @@ type RoleFormValues = z.infer<typeof roleFormSchema>;
 
 // System role card component
 const SystemRoleCard = ({ roleName }: { roleName: SystemRole }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
   return (
     <Card className="mb-4">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShieldAlert className="h-5 w-5 text-primary" />
-          {roleName.charAt(0).toUpperCase() + roleName.slice(1)}
-          <Badge variant="outline" className="ml-2">System</Badge>
-        </CardTitle>
-        <CardDescription>
-          {roleName === "admin" && "Full access to all system features and settings"}
-          {roleName === "manager" && "Manage domains, records, and access to organizational resources"}
-          {roleName === "user" && "Standard user with ability to view and modify specific resources"}
-          {roleName === "readonly" && "View-only access to resources without modification permissions"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {systemRolePermissions[roleName].map((permission) => (
-            <Badge key={permission} variant="secondary" className="mb-1">
-              {availablePermissions.find(p => p.id === permission)?.label || permission}
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader className="pb-2">
+          <CollapsibleTrigger className="w-full text-left">
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-primary" />
+              {roleName.charAt(0).toUpperCase() + roleName.slice(1)}
+              <Badge variant="outline" className="ml-2">System</Badge>
+            </CardTitle>
+            <CardDescription>
+              {roleName === "admin" && "Full access to all system features and settings"}
+              {roleName === "manager" && "Manage domains, records, and access to organizational resources"}
+              {roleName === "user" && "Standard user with ability to view and modify specific resources"}
+              {roleName === "readonly" && "View-only access to resources without modification permissions"}
+            </CardDescription>
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {systemRolePermissions[roleName].map((permission) => (
+                <Badge key={permission} variant="secondary" className="mb-1">
+                  {availablePermissions.find(p => p.id === permission)?.label || permission}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 };
@@ -350,41 +363,54 @@ export default function RolesPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {customRoles.map((role: CustomRole) => (
-                <Card key={role.id} className="mb-4">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <ShieldCheck className="h-5 w-5 text-primary" />
-                          {role.name}
-                          <Badge variant="secondary" className="ml-2">Custom</Badge>
-                        </CardTitle>
-                        {role.description && (
-                          <CardDescription>{role.description}</CardDescription>
-                        )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditRole(role)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRole(role)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {role.permissions.map((permission) => (
-                        <Badge key={permission} variant="secondary" className="mb-1">
-                          {availablePermissions.find(p => p.id === permission)?.label || permission}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {customRoles.map((role: CustomRole) => {
+                const [isOpen, setIsOpen] = useState(false);
+                return (
+                  <Card key={role.id} className="mb-4">
+                    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <CollapsibleTrigger className="text-left flex-1">
+                            <CardTitle className="flex items-center gap-2">
+                              <ShieldCheck className="h-5 w-5 text-primary" />
+                              {role.name}
+                              <Badge variant="secondary" className="ml-2">Custom</Badge>
+                            </CardTitle>
+                            {role.description && (
+                              <CardDescription>{role.description}</CardDescription>
+                            )}
+                          </CollapsibleTrigger>
+                          <div className="flex space-x-2">
+                            <Button variant="ghost" size="icon" onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditRole(role);
+                            }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRole(role);
+                            }}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CollapsibleContent>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {role.permissions.map((permission) => (
+                              <Badge key={permission} variant="secondary" className="mb-1">
+                                {availablePermissions.find(p => p.id === permission)?.label || permission}
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

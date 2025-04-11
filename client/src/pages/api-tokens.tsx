@@ -76,6 +76,8 @@ const tokenFormSchema = z.object({
   name: z.string().min(1, "Token name is required"),
   role: z.string().min(1, "Role is required"),
   expiresIn: z.string().optional(),
+  customDate: z.date().optional(),
+  customTime: z.string().optional(),
 });
 
 export default function ApiTokensPage() {
