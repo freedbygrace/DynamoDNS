@@ -239,6 +239,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.user?.id
         );
         
+        // Sync with provider if applicable
+        try {
+          const providerRecordId = await syncDnsRecordWithProvider('create', record.domainId, record);
+          if (providerRecordId) {
+            console.log(`Record synced with provider, got provider record ID: ${providerRecordId}`);
+            // Update the record with the provider record ID
+            await storage.updateDnsRecord(record.id, { 
+              providerRecordId 
+            });
+          }
+        } catch (providerError) {
+          console.error("Error syncing with provider (continuing):", providerError);
+          // We don't fail the request if provider sync fails
+        }
+        
         // Trigger webhooks
         await triggerDnsWebhooks("create", record.domainId, record, null, req.user?.id);
         
@@ -318,6 +333,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.user?.id
         );
         
+        // Sync with provider if applicable
+        try {
+          const providerRecordId = await syncDnsRecordWithProvider(
+            'update', 
+            record.domainId, 
+            record, 
+            record.providerRecordId || undefined
+          );
+          
+          if (providerRecordId && providerRecordId !== record.providerRecordId) {
+            console.log(`Record synced with provider, updating provider record ID: ${providerRecordId}`);
+            // Update the record with the provider record ID
+            await storage.updateDnsRecord(record.id, { 
+              providerRecordId 
+            });
+          }
+        } catch (providerError) {
+          console.error("Error syncing with provider (continuing):", providerError);
+          // We don't fail the request if provider sync fails
+        }
+        
         // Trigger webhooks
         await triggerDnsWebhooks("update", record.domainId, record, currentRecord, req.user?.id);
       } catch (historyError) {
@@ -373,6 +409,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           undefined,
           req.user?.id
         );
+        
+        // Sync with provider if applicable
+        try {
+          if (currentRecord.providerRecordId) {
+            console.log(`Deleting record with provider record ID: ${currentRecord.providerRecordId}`);
+            await syncDnsRecordWithProvider('delete', currentRecord.domainId, null, currentRecord.providerRecordId);
+            console.log(`Record deleted from provider successfully`);
+          } else {
+            console.log(`No provider record ID found for record ${recordId}, skipping provider sync`);
+          }
+        } catch (providerError) {
+          console.error("Error syncing with provider (continuing):", providerError);
+          // We don't fail the request if provider sync fails
+        }
         
         // Trigger webhooks
         await triggerDnsWebhooks("delete", currentRecord.domainId, null, currentRecord, req.user?.id);
