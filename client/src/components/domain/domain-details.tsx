@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import { RecentActivity } from "@/components/activity/recent-activity";
 import { Pagination } from "@/components/shared/pagination";
-import { Loader2, FileText, Pencil, Trash2, Plus } from "lucide-react";
+import { Loader2, FileText, Pencil, Trash2, Plus, Copy } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 // DNS Record form schema
@@ -465,18 +465,14 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                           <TooltipTrigger asChild>
                             <span className="truncate max-w-[150px] inline-block">
                               {record.isAutoIP 
-                                ? (record.currentIp 
-                                  ? `Auto IP (${record.currentIp})` 
-                                  : "Auto IP") 
+                                ? "Auto-managed" 
                                 : record.content}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
                               {record.isAutoIP 
-                                ? (record.currentIp 
-                                  ? <>Auto IP - Current value: <strong>{record.currentIp}</strong></> 
-                                  : "Auto IP - Resolving current IP...")
+                                ? "Content automatically managed by AutoIP" 
                                 : record.content}
                             </p>
                             {record.notes && (
@@ -488,6 +484,49 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                    </TableCell>
+                    <TableCell>
+                      {record.isAutoIP ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                            Enabled
+                          </Badge>
+                          {record.currentIp && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-7 px-2 text-xs font-mono"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(record.currentIp || '');
+                                      toast({
+                                        title: "IP copied to clipboard",
+                                        description: record.currentIp,
+                                        duration: 2000
+                                      });
+                                    }}
+                                  >
+                                    <span className="flex items-center gap-1">
+                                      {record.currentIp.substring(0, 10)}...
+                                      <Copy className="h-3 w-3" />
+                                    </span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-mono">{record.currentIp}</p>
+                                  <p className="text-xs mt-1">Click to copy</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                          Disabled
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{record.ttl}s</TableCell>
                     <TableCell>
