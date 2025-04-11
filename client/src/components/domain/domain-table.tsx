@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Domain, Provider } from "@shared/schema";
 import { Link } from "wouter";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +29,13 @@ interface DomainTableProps {
 }
 
 export function DomainTable({ onManageDomain, onDeleteDomain, onAddDomain }: DomainTableProps) {
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
   const { data: domains = [], isLoading } = useQuery<Domain[]>({
-    queryKey: ["/api/domains", currentOrganization?.id],
-    enabled: !!currentOrganization,
+    queryKey: ["/api/domains", currentCustomer?.id],
+    enabled: !!currentCustomer,
   });
 
   // Get providers to display provider names
