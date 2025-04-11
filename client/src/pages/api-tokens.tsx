@@ -74,9 +74,8 @@ import { formatDistanceToNow, format } from "date-fns";
 // Token form schema
 const tokenFormSchema = z.object({
   name: z.string().min(1, "Token name is required"),
-  permissions: z.array(z.string()).min(1, "At least one permission is required"),
   role: z.string().min(1, "Role is required"),
-  expiresAt: z.string().optional(),
+  expiresIn: z.string().optional(),
 });
 
 export default function ApiTokensPage() {
@@ -101,9 +100,8 @@ export default function ApiTokensPage() {
     resolver: zodResolver(tokenFormSchema),
     defaultValues: {
       name: "",
-      permissions: ["readonly"],
       role: "readonly",
-      expiresAt: undefined,
+      expiresIn: "never",
     },
   });
 
@@ -113,13 +111,34 @@ export default function ApiTokensPage() {
       const tokenData: Partial<InsertApiToken> = {
         name: data.name,
         organizationId: currentOrganization?.id || "",
-        permissions: data.permissions,
         role: data.role,
         isActive: true,
       };
       
-      if (data.expiresAt) {
-        tokenData.expiresAt = new Date(data.expiresAt);
+      // Calculate expiration date based on selection
+      if (data.expiresIn && data.expiresIn !== 'never') {
+        const now = new Date();
+        
+        switch (data.expiresIn) {
+          case '1hour':
+            tokenData.expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+            break;
+          case '1day':
+            tokenData.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            break;
+          case '7days':
+            tokenData.expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            break;
+          case '30days':
+            tokenData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            break;
+          case '90days':
+            tokenData.expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+            break;
+          case '1year':
+            tokenData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+            break;
+        }
       }
       
       const res = await apiRequest("POST", "/api/api-tokens", tokenData);
@@ -235,7 +254,6 @@ export default function ApiTokensPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Token</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Permissions</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -252,15 +270,6 @@ export default function ApiTokensPage() {
                       <Badge variant="outline" className="text-xs capitalize">
                         {token.role || "readonly"}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {token.permissions?.map((permission) => (
-                          <Badge key={permission} variant="outline" className="text-xs">
-                            {permission}
-                          </Badge>
-                        ))}
-                      </div>
                     </TableCell>
                     <TableCell>
                       {token.expiresAt ? (
@@ -376,73 +385,35 @@ export default function ApiTokensPage() {
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="permissions"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel className="text-base">Permissions</FormLabel>
-                      <FormDescription>
-                        Select specific permissions for this token
-                      </FormDescription>
-                    </div>
-                    {systemRoles.map((role) => (
-                      <FormField
-                        key={role}
-                        control={form.control}
-                        name="permissions"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={role}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(role)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, role])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== role
-                                          )
-                                        )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-normal">
-                                {role === "admin" && "Administrator - Full access to all resources"}
-                                {role === "manager" && "Manager - Can manage domains and records"}
-                                {role === "user" && "User - Can manage records only"}
-                                {role === "readonly" && "Read-only - Can only view resources"}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
               
               <FormField
                 control={form.control}
-                name="expiresAt"
+                name="expiresIn"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Expiration (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="datetime-local" 
-                        {...field} 
-                        value={field.value || ""}
-                      />
-                    </FormControl>
+                    <FormLabel>Expiration</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select expiration time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="never">Never expires</SelectItem>
+                        <SelectItem value="1hour">1 hour</SelectItem>
+                        <SelectItem value="1day">1 day</SelectItem>
+                        <SelectItem value="7days">7 days</SelectItem>
+                        <SelectItem value="30days">30 days</SelectItem>
+                        <SelectItem value="90days">90 days</SelectItem>
+                        <SelectItem value="1year">1 year</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Leave blank for a non-expiring token
+                      Select how long this token should remain valid
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -494,7 +465,7 @@ export default function ApiTokensPage() {
           <div className="flex items-start mt-2 p-4 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 rounded-md">
             <Info className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <strong>Security note:</strong> Store this token securely. It provides access to your account based on the permissions you selected.
+              <strong>Security note:</strong> Store this token securely. It provides access to your account based on the role you selected.
             </div>
           </div>
           
