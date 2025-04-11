@@ -489,8 +489,7 @@ export function DomainDetails({ domain, onBack }: DomainDetailsProps) {
                         <Switch
                           checked={record.isActive}
                           onCheckedChange={(checked) => handleToggleActive(record, checked)}
-                          className="data-[state=checked]:bg-green-500"
-                          size="lg"
+                          className="data-[state=checked]:bg-green-500 h-7 w-12"
                         />
                         <span className={record.isActive ? "text-green-700 font-medium" : "text-muted-foreground"}>
                           {record.isActive ? "Active" : "Inactive"}
