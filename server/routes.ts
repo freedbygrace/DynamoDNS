@@ -707,10 +707,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/domains", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
     try {
       let domains;
-      const orgId = req.query.organizationId ? parseInt(req.query.organizationId as string) : undefined;
+      const customerId = req.query.customerId as string;
       
-      if (orgId) {
-        domains = await storage.getDomainsByOrganization(orgId);
+      if (customerId) {
+        domains = await storage.getDomainsByCustomer(customerId);
       } else {
         domains = await storage.getAllDomains();
       }
@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a custom validation schema for the API that makes providerId optional
       const domainSchema = z.object({
         name: z.string(),
-        organizationId: z.string().uuid(),
+        customerId: z.string().uuid(),
         providerId: z.string().uuid().optional(),
         isActive: z.boolean().optional().default(true)
       });
@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create custom validation schema with optional providerId
       const domainUpdateSchema = z.object({
         name: z.string().optional(),
-        organizationId: z.string().uuid().optional(),
+        customerId: z.string().uuid().optional(),
         providerId: z.string().uuid().optional().nullable(),
         isActive: z.boolean().optional()
       });
@@ -1406,9 +1406,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Webhook not found" });
       }
       
-      // Check authorization
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to access this webhook" });
+      // Check authorization for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to access this webhook" });
+        }
       }
       
       res.json(webhook);
@@ -1430,8 +1437,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertWebhookSchema.parse(requestData);
       
       // Check authorization for non-admin users
-      if (req.user?.role !== "admin" && validatedData.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to create webhooks for this organization" });
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the customer
+        if (!userCustomerIds.includes(validatedData.customerId)) {
+          return res.status(403).json({ message: "Not authorized to create webhooks for this customer" });
+        }
       }
       
       const webhook = await storage.createWebhook(validatedData);
@@ -1455,16 +1469,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Webhook not found" });
       }
       
-      // Check authorization
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to modify this webhook" });
+      // Check authorization for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to modify this webhook" });
+        }
       }
       
       const validatedData = insertWebhookSchema.partial().parse(req.body);
       
-      // Prevent changing organization for security reasons
-      if (validatedData.organizationId && validatedData.organizationId !== webhook.organizationId) {
-        return res.status(400).json({ message: "Cannot change webhook organization" });
+      // Prevent changing customer for security reasons
+      if (validatedData.customerId && validatedData.customerId !== webhook.customerId) {
+        return res.status(400).json({ message: "Cannot change webhook customer" });
       }
       
       const updatedWebhook = await storage.updateWebhook(req.params.id, validatedData);
@@ -1487,9 +1508,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Webhook not found" });
       }
       
-      // Check authorization
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to delete this webhook" });
+      // Check authorization for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to delete this webhook" });
+        }
       }
       
       const deleted = await storage.deleteWebhook(req.params.id);
