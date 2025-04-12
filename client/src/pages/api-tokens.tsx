@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { ApiToken, InsertApiToken, systemRoles, CustomRole } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, useWatch } from "react-hook-form";
@@ -110,7 +110,7 @@ const tokenFormSchema = z.object({
 export default function ApiTokensPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -123,8 +123,8 @@ export default function ApiTokensPage() {
   
   // Fetch API tokens
   const { data: tokens = [], isLoading } = useQuery<ApiToken[]>({
-    queryKey: ["/api/api-tokens", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+    queryKey: ["/api/api-tokens", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
   
   // Fetch custom roles
@@ -148,7 +148,7 @@ export default function ApiTokensPage() {
       // Instead of using expiresAt directly, send the form data and let the server handle it
       const tokenData: any = {
         name: data.name,
-        organizationId: currentOrganization?.id || "1",
+        customerId: currentCustomer?.id || "1",
         role: data.role,
         isActive: true,
         expiresIn: data.expiresIn || 'never',
@@ -179,7 +179,7 @@ export default function ApiTokensPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentCustomer?.id] });
       setIsAddTokenDialogOpen(false);
       setNewToken(data.token);
       setShowTokenDialog(true);
@@ -204,7 +204,7 @@ export default function ApiTokensPage() {
       await apiRequest("DELETE", `/api/api-tokens/${tokenId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentCustomer?.id] });
       setIsDeleteDialogOpen(false);
       setSelectedToken(null);
       toast({
@@ -229,7 +229,7 @@ export default function ApiTokensPage() {
     },
     onSuccess: (data) => {
       // Force refresh the tokens list
-      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/api-tokens", currentCustomer?.id] });
       
       // If we're viewing the token details dialog, update the selected token
       if (isViewTokenDialogOpen && selectedToken && data.id === selectedToken.id) {
