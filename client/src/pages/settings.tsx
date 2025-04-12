@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { Organization, InsertOrganization } from "@shared/schema";
+import { Customer, InsertCustomer } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
@@ -88,7 +88,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { currentOrganization, setCurrentOrganization, createOrganizationMutation } = useOrganization();
+  const { currentCustomer, setCurrentCustomer, createCustomerMutation } = useCustomer();
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
