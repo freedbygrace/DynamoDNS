@@ -461,17 +461,17 @@ export default function SettingsPage() {
                     <Form {...createOrganizationForm}>
                       <form 
                         onSubmit={createOrganizationForm.handleSubmit((data) => {
-                          createOrganizationMutation.mutate(data);
-                          createOrganizationForm.reset();
+                          createCustomerMutation.mutate(data);
+                          createCustomerForm.reset();
                         })} 
                         className="space-y-4"
                       >
                         <FormField
-                          control={createOrganizationForm.control}
+                          control={createCustomerForm.control}
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Customer Name</FormLabel>
+                              <FormLabel>Customer Name*</FormLabel>
                               <FormControl>
                                 <Input {...field} placeholder="Enter customer name" />
                               </FormControl>
@@ -481,7 +481,218 @@ export default function SettingsPage() {
                         />
                         
                         <FormField
-                          control={createOrganizationForm.control}
+                          control={createCustomerForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Brief description of the customer" />
+                              </FormControl>
+                              <FormDescription>
+                                A brief description of the customer's business
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={createCustomerForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="contact@example.com" type="email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={createCustomerForm.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="+1 (555) 123-4567" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={createCustomerForm.control}
+                          name="website"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Website</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://example.com" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={createCustomerForm.control}
+                          name="industry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Industry</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Technology, Healthcare, etc." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-medium">Address Information</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="address"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Address</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="123 Main Street" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="city"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>City</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="San Francisco" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="state"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>State/Province</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="CA" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="zipCode"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>ZIP/Postal Code</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="94105" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="country"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Country</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="United States" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-medium">Billing Information</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="billingEmail"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Billing Email</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="billing@example.com" type="email" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createCustomerForm.control}
+                              name="billingAddress"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Billing Address</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Same as main address or enter different address" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                        
+                        <FormField
+                          control={createCustomerForm.control}
+                          name="accountManager"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Account Manager</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Name of assigned account manager" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={createCustomerForm.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notes</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Additional notes about this customer" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={createCustomerForm.control}
                           name="isActive"
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">

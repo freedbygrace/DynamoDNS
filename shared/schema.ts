@@ -18,8 +18,23 @@ export const users = pgTable("users", {
 export const customers = pgTable("customers", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
+  description: text("description"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country"),
+  website: text("website"),
+  industry: text("industry"),
+  notes: text("notes"),
+  accountManager: text("account_manager"),
+  billingEmail: text("billing_email"),
+  billingAddress: text("billing_address"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Customer-User Assignment - Many-to-many relationship
@@ -182,7 +197,37 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export const insertCustomerSchema = createInsertSchema(customers).pick({
   name: true,
+  description: true,
+  email: true,
+  phone: true,
+  address: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  country: true,
+  website: true,
+  industry: true,
+  notes: true,
+  accountManager: true,
+  billingEmail: true,
+  billingAddress: true,
   isActive: true,
+}).extend({
+  // Make all fields optional except name and isActive
+  description: z.string().optional(),
+  email: z.string().email("Please enter a valid email address").optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
+  website: z.string().url("Please enter a valid URL").optional(),
+  industry: z.string().optional(),
+  notes: z.string().optional(),
+  accountManager: z.string().optional(),
+  billingEmail: z.string().email("Please enter a valid billing email address").optional(),
+  billingAddress: z.string().optional(),
 });
 
 export const insertCustomerUserAssignmentSchema = createInsertSchema(customerUserAssignments).pick({
