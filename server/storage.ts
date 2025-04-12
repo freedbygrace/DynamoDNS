@@ -264,7 +264,6 @@ export class MemStorage implements IStorage {
       email: user.email,
       fullName: user.fullName || null,
       role: user.role || 'user',
-      organizationId: user.organizationId || null,
       createdAt
     };
     this.usersMap.set(numId, newUser);
@@ -625,7 +624,47 @@ export class MemStorage implements IStorage {
   }
   
   async deleteApiToken(id: string): Promise<boolean> {
-    return this.apiTokensMap.delete(parseInt(id));
+    // First, remove all customer access entries for this token
+    const numId = parseInt(id);
+    const accessEntries = Array.from(this.apiTokenCustomerAccessMap.values())
+      .filter(access => access.tokenId === id);
+    
+    for (const access of accessEntries) {
+      this.apiTokenCustomerAccessMap.delete(parseInt(access.id));
+    }
+    
+    // Then delete the token itself
+    return this.apiTokensMap.delete(numId);
+  }
+  
+  // API token customer access management
+  async getApiTokenCustomerAccess(tokenId: string): Promise<ApiTokenCustomerAccess[]> {
+    return Array.from(this.apiTokenCustomerAccessMap.values())
+      .filter(access => access.tokenId === tokenId);
+  }
+  
+  async addApiTokenCustomerAccess(access: InsertApiTokenCustomerAccess): Promise<ApiTokenCustomerAccess> {
+    const numId = this.apiTokenCustomerAccessIdCounter++;
+    const createdAt = new Date();
+    
+    const newAccess: ApiTokenCustomerAccess = {
+      id: numId.toString(),
+      tokenId: access.tokenId,
+      customerId: access.customerId,
+      createdAt
+    };
+    
+    this.apiTokenCustomerAccessMap.set(numId, newAccess);
+    return newAccess;
+  }
+  
+  async removeApiTokenCustomerAccess(tokenId: string, customerId: string): Promise<boolean> {
+    const access = Array.from(this.apiTokenCustomerAccessMap.values())
+      .find(a => a.tokenId === tokenId && a.customerId === customerId);
+    
+    if (!access) return false;
+    
+    return this.apiTokenCustomerAccessMap.delete(parseInt(access.id));
   }
   
   // DNS History
