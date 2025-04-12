@@ -175,7 +175,7 @@ export default function WebhooksPage() {
         description: "The webhook has been updated successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", currentOrganization?.id],
+        queryKey: ["/api/webhooks", currentCustomer?.id],
       });
       setIsEditOpen(false);
       resetForm();
@@ -200,7 +200,7 @@ export default function WebhooksPage() {
         description: "The webhook has been deleted successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", currentOrganization?.id],
+        queryKey: ["/api/webhooks", currentCustomer?.id],
       });
       setIsDeleteOpen(false);
       setCurrentWebhook(null);
