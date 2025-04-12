@@ -154,6 +154,20 @@ export default function SettingsPage() {
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
       name: currentCustomer?.name || "",
+      description: currentCustomer?.description || "",
+      email: currentCustomer?.email || "",
+      phone: currentCustomer?.phone || "",
+      address: currentCustomer?.address || "",
+      city: currentCustomer?.city || "",
+      state: currentCustomer?.state || "",
+      zipCode: currentCustomer?.zipCode || "",
+      country: currentCustomer?.country || "",
+      website: currentCustomer?.website || "",
+      industry: currentCustomer?.industry || "",
+      notes: currentCustomer?.notes || "",
+      accountManager: currentCustomer?.accountManager || "",
+      billingEmail: currentCustomer?.billingEmail || "",
+      billingAddress: currentCustomer?.billingAddress || "",
       isActive: currentCustomer?.isActive,
     },
   });
@@ -183,6 +197,20 @@ export default function SettingsPage() {
     if (currentCustomer) {
       customerForm.reset({
         name: currentCustomer.name,
+        description: currentCustomer.description || "",
+        email: currentCustomer.email || "",
+        phone: currentCustomer.phone || "",
+        address: currentCustomer.address || "",
+        city: currentCustomer.city || "",
+        state: currentCustomer.state || "",
+        zipCode: currentCustomer.zipCode || "",
+        country: currentCustomer.country || "",
+        website: currentCustomer.website || "",
+        industry: currentCustomer.industry || "",
+        notes: currentCustomer.notes || "",
+        accountManager: currentCustomer.accountManager || "",
+        billingEmail: currentCustomer.billingEmail || "",
+        billingAddress: currentCustomer.billingAddress || "",
         isActive: currentCustomer.isActive,
       });
     }
@@ -319,7 +347,7 @@ export default function SettingsPage() {
   return (
     <MainLayout
       title="Settings"
-      description="Manage your account and organization settings."
+      description="Manage your account and customer settings."
     >
       <Tabs defaultValue="account" className="space-y-6">
         <TabsList className="w-full sm:w-auto">
