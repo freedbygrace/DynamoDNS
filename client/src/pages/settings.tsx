@@ -58,12 +58,40 @@ import { Loader2, Moon, Sun, Lock, Laptop } from "lucide-react";
 // Customer form schema
 const customerFormSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
+  description: z.string().optional(),
+  email: z.string().email("Please enter a valid email").optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  state: z.string().optional().or(z.literal('')),
+  zipCode: z.string().optional().or(z.literal('')),
+  country: z.string().optional().or(z.literal('')),
+  website: z.string().url("Please enter a valid URL").optional().or(z.literal('')),
+  industry: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
+  accountManager: z.string().optional().or(z.literal('')),
+  billingEmail: z.string().email("Please enter a valid email").optional().or(z.literal('')),
+  billingAddress: z.string().optional().or(z.literal('')),
   isActive: z.boolean().default(true),
 });
 
 // Create customer form schema
 const createCustomerFormSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
+  description: z.string().optional(),
+  email: z.string().email("Please enter a valid email").optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  state: z.string().optional().or(z.literal('')),
+  zipCode: z.string().optional().or(z.literal('')),
+  country: z.string().optional().or(z.literal('')),
+  website: z.string().url("Please enter a valid URL").optional().or(z.literal('')),
+  industry: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
+  accountManager: z.string().optional().or(z.literal('')),
+  billingEmail: z.string().email("Please enter a valid email").optional().or(z.literal('')),
+  billingAddress: z.string().optional().or(z.literal('')),
   isActive: z.boolean().default(true),
 });
 
@@ -97,6 +125,20 @@ export default function SettingsPage() {
     resolver: zodResolver(createCustomerFormSchema),
     defaultValues: {
       name: "",
+      description: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "",
+      website: "",
+      industry: "",
+      notes: "",
+      accountManager: "",
+      billingEmail: "",
+      billingAddress: "",
       isActive: true,
     },
   });
@@ -458,9 +500,9 @@ export default function SettingsPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Form {...createOrganizationForm}>
+                    <Form {...createCustomerForm}>
                       <form 
-                        onSubmit={createOrganizationForm.handleSubmit((data) => {
+                        onSubmit={createCustomerForm.handleSubmit((data) => {
                           createCustomerMutation.mutate(data);
                           createCustomerForm.reset();
                         })} 
@@ -714,9 +756,9 @@ export default function SettingsPage() {
                         
                         <Button 
                           type="submit" 
-                          disabled={createOrganizationMutation.isPending}
+                          disabled={createCustomerMutation.isPending}
                         >
-                          {createOrganizationMutation.isPending ? (
+                          {createCustomerMutation.isPending ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Creating...
@@ -739,10 +781,10 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Form {...organizationForm}>
-                    <form onSubmit={organizationForm.handleSubmit(onOrganizationSubmit)} className="space-y-4">
+                  <Form {...customerForm}>
+                    <form onSubmit={customerForm.handleSubmit(onCustomerSubmit)} className="space-y-4">
                       <FormField
-                        control={organizationForm.control}
+                        control={customerForm.control}
                         name="name"
                         render={({ field }) => (
                           <FormItem>
@@ -756,7 +798,7 @@ export default function SettingsPage() {
                       />
                       
                       <FormField
-                        control={organizationForm.control}
+                        control={customerForm.control}
                         name="isActive"
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
@@ -778,9 +820,9 @@ export default function SettingsPage() {
                       
                       <Button 
                         type="submit" 
-                        disabled={updateOrganizationMutation.isPending}
+                        disabled={updateCustomerMutation.isPending}
                       >
-                        {updateOrganizationMutation.isPending ? (
+                        {updateCustomerMutation.isPending ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Saving...
@@ -893,18 +935,18 @@ export default function SettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the customer <strong>{currentOrganization?.name}</strong>?
+              Are you sure you want to delete the customer <strong>{currentCustomer?.name}</strong>?
               This action cannot be undone. All domains, DNS records, and related data will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => deleteOrganizationMutation.mutate()}
+              onClick={() => deleteCustomerMutation.mutate()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteOrganizationMutation.isPending}
+              disabled={deleteCustomerMutation.isPending}
             >
-              {deleteOrganizationMutation.isPending ? (
+              {deleteCustomerMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
