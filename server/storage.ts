@@ -121,60 +121,68 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private usersMap: Map<number, User>;
-  private orgsMap: Map<number, Organization>;
+  private customersMap: Map<number, Customer>;
+  private customerUserMap: Map<number, CustomerUserAssignment>;
   private domainsMap: Map<number, Domain>;
+  private domainCredentialsMap: Map<number, DomainCredentials>;
   private recordsMap: Map<number, DnsRecord>;
   private providersMap: Map<number, Provider>;
   private apiTokensMap: Map<number, ApiToken>;
+  private apiTokenCustomerAccessMap: Map<number, ApiTokenCustomerAccess>;
   private historyMap: Map<number, DnsHistory>;
   private webhooksMap: Map<number, Webhook>;
   private webhookDeliveryLogsMap: Map<number, WebhookDeliveryLog>;
   private metricsMap: Map<number, DnsMetric>;
   private customRolesMap: Map<number, CustomRole>;
-  // Group maps have been removed
   
   // Counters for IDs
   private userIdCounter: number;
-  private orgIdCounter: number;
+  private customerIdCounter: number;
+  private customerUserIdCounter: number;
   private domainIdCounter: number;
+  private domainCredentialsIdCounter: number;
   private recordIdCounter: number;
   private providerIdCounter: number;
   private apiTokenIdCounter: number;
+  private apiTokenCustomerAccessIdCounter: number;
   private historyIdCounter: number;
   private webhookIdCounter: number;
   private webhookDeliveryLogIdCounter: number;
   private metricIdCounter: number;
   private customRoleIdCounter: number;
-  // Group counters have been removed
   
   public sessionStore: any;
 
   constructor() {
     this.usersMap = new Map();
-    this.orgsMap = new Map();
+    this.customersMap = new Map();
+    this.customerUserMap = new Map();
     this.domainsMap = new Map();
+    this.domainCredentialsMap = new Map();
     this.recordsMap = new Map();
     this.providersMap = new Map();
     this.apiTokensMap = new Map();
+    this.apiTokenCustomerAccessMap = new Map();
     this.historyMap = new Map();
     this.webhooksMap = new Map();
     this.webhookDeliveryLogsMap = new Map();
     this.metricsMap = new Map();
     this.customRolesMap = new Map();
-    // Group maps initialization has been removed
     
     this.userIdCounter = 1;
-    this.orgIdCounter = 1;
+    this.customerIdCounter = 1;
+    this.customerUserIdCounter = 1;
     this.domainIdCounter = 1;
+    this.domainCredentialsIdCounter = 1;
     this.recordIdCounter = 1;
     this.providerIdCounter = 1;
     this.apiTokenIdCounter = 1;
+    this.apiTokenCustomerAccessIdCounter = 1;
     this.historyIdCounter = 1;
     this.webhookIdCounter = 1;
     this.webhookDeliveryLogIdCounter = 1;
     this.metricIdCounter = 1;
     this.customRoleIdCounter = 1;
-    // Group counter initialization has been removed
     
     // Session store is created in the DatabaseStorage class
     this.sessionStore = null;
@@ -661,9 +669,9 @@ export class MemStorage implements IStorage {
     return this.webhooksMap.get(parseInt(id));
   }
 
-  async getWebhooksByOrganization(organizationId: string): Promise<Webhook[]> {
+  async getWebhooksByCustomer(customerId: string): Promise<Webhook[]> {
     return Array.from(this.webhooksMap.values())
-      .filter(webhook => webhook.organizationId === organizationId);
+      .filter(webhook => webhook.customerId === customerId);
   }
 
   async createWebhook(webhook: InsertWebhook): Promise<Webhook> {
@@ -673,7 +681,7 @@ export class MemStorage implements IStorage {
       id: numId.toString(),
       name: webhook.name,
       url: webhook.url,
-      organizationId: webhook.organizationId,
+      customerId: webhook.customerId,
       secret: webhook.secret ?? null,
       events: webhook.events,
       isActive: webhook.isActive ?? true,
