@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layouts/main-layout";
 import { DnsHistory, Domain } from "@shared/schema";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   Card,
@@ -31,15 +31,15 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Pencil, Trash, AlertCircle } from "lucide-react";
 
 export default function HistoryPage() {
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   const [selectedDomain, setSelectedDomain] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
   // Fetch domains for filter
   const { data: domains = [] } = useQuery<Domain[]>({
-    queryKey: ["/api/domains", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+    queryKey: ["/api/domains", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
 
   // Fetch DNS history
