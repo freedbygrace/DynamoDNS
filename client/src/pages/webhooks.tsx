@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import { Webhook, WebhookDeliveryLog } from "@shared/schema";
 
 import {
@@ -84,7 +84,7 @@ import {
 export default function WebhooksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -116,22 +116,22 @@ export default function WebhooksPage() {
     });
   };
 
-  // Fetch webhooks for the selected organization
+  // Fetch webhooks for the selected customer
   const {
     data: webhooks = [],
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["/api/webhooks", currentOrganization?.id],
+    queryKey: ["/api/webhooks", currentCustomer?.id],
     queryFn: async () => {
-      if (!currentOrganization) return [];
+      if (!currentCustomer) return [];
       const res = await apiRequest(
         "GET",
-        `/api/webhooks?organizationId=${currentOrganization.id}`
+        `/api/webhooks?customerId=${currentCustomer.id}`
       );
       return await res.json();
     },
-    enabled: !!currentOrganization,
+    enabled: !!currentCustomer,
   });
 
   // Create webhook mutation
@@ -139,7 +139,7 @@ export default function WebhooksPage() {
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/webhooks", {
         ...data,
-        organizationId: currentOrganization?.id,
+        customerId: currentCustomer?.id,
       });
       return await res.json();
     },
@@ -149,7 +149,7 @@ export default function WebhooksPage() {
         description: "The webhook has been created successfully.",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/webhooks", currentOrganization?.id],
+        queryKey: ["/api/webhooks", currentCustomer?.id],
       });
       setIsCreateOpen(false);
       resetForm();
