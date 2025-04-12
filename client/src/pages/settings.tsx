@@ -699,7 +699,7 @@ export default function SettingsPage() {
                   Deleting...
                 </>
               ) : (
-                "Delete Organization"
+                "Delete Customer"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
