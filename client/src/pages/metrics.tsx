@@ -5,7 +5,7 @@ import { DnsUpdateChart } from "@/components/charts/dns-update-chart";
 import { ProviderDistributionChart } from "@/components/charts/provider-distribution-chart";
 import { RecordTypeChart } from "@/components/charts/record-type-chart";
 import { Domain, DnsMetric } from "@shared/schema";
-import { useOrganization } from "@/context/organization-context";
+import { useCustomer } from "@/context/customer-context";
 import {
   Card,
   CardContent,
@@ -29,14 +29,14 @@ import {
 import { BarChart, LineChart, PieChart, Home, BarChart2, Activity, Clock } from "lucide-react";
 
 export default function MetricsPage() {
-  const { currentOrganization } = useOrganization();
+  const { currentCustomer } = useCustomer();
   const [selectedTimeframe, setSelectedTimeframe] = useState("day");
   const [selectedDomain, setSelectedDomain] = useState<string>("all");
   
   // Fetch domains for filter
   const { data: domains = [] } = useQuery<Domain[]>({
-    queryKey: ["/api/domains", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+    queryKey: ["/api/domains", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
 
   // Calculate date range for metrics queries
