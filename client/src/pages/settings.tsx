@@ -452,9 +452,9 @@ export default function SettingsPage() {
               {user?.role === "admin" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Create New Organization</CardTitle>
+                    <CardTitle>Create New Customer</CardTitle>
                     <CardDescription>
-                      Add a new organization to your account
+                      Add a new customer to your account
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -471,9 +471,9 @@ export default function SettingsPage() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Organization Name</FormLabel>
+                              <FormLabel>Customer Name</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="Enter organization name" />
+                                <Input {...field} placeholder="Enter customer name" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -488,7 +488,7 @@ export default function SettingsPage() {
                               <div className="space-y-0.5">
                                 <FormLabel className="text-base">Active Status</FormLabel>
                                 <FormDescription>
-                                  Enable this organization upon creation
+                                  Enable this customer upon creation
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -511,7 +511,7 @@ export default function SettingsPage() {
                               Creating...
                             </>
                           ) : (
-                            "Create Organization"
+                            "Create Customer"
                           )}
                         </Button>
                       </form>
@@ -522,9 +522,9 @@ export default function SettingsPage() {
             
               <Card>
                 <CardHeader>
-                  <CardTitle>Organization Details</CardTitle>
+                  <CardTitle>Customer Details</CardTitle>
                   <CardDescription>
-                    Manage your organization information.
+                    Manage your customer information.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -535,7 +535,7 @@ export default function SettingsPage() {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Organization Name</FormLabel>
+                            <FormLabel>Customer Name</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -552,7 +552,7 @@ export default function SettingsPage() {
                             <div className="space-y-0.5">
                               <FormLabel className="text-base">Active Status</FormLabel>
                               <FormDescription>
-                                Enable or disable this organization
+                                Enable or disable this customer
                               </FormDescription>
                             </div>
                             <FormControl>
@@ -588,7 +588,7 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle>Danger Zone</CardTitle>
                     <CardDescription>
-                      Irreversible actions for your organization
+                      Irreversible actions for your customer
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -596,9 +596,9 @@ export default function SettingsPage() {
                       <div className="rounded-lg border border-destructive p-4">
                         <div className="flex flex-row items-center justify-between">
                           <div>
-                            <h4 className="font-medium">Delete Organization</h4>
+                            <h4 className="font-medium">Delete Customer</h4>
                             <p className="text-sm text-muted-foreground">
-                              Permanently delete this organization and all associated data
+                              Permanently delete this customer and all associated data
                             </p>
                           </div>
                           <Button 
@@ -676,13 +676,13 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Delete Organization Dialog */}
+      {/* Delete Customer Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Organization</AlertDialogTitle>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the organization <strong>{currentOrganization?.name}</strong>?
+              Are you sure you want to delete the customer <strong>{currentOrganization?.name}</strong>?
               This action cannot be undone. All domains, DNS records, and related data will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
