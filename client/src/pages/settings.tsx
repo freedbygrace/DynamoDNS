@@ -55,15 +55,15 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Moon, Sun, Lock, Laptop } from "lucide-react";
 
-// Organization form schema
-const organizationFormSchema = z.object({
-  name: z.string().min(1, "Organization name is required"),
+// Customer form schema
+const customerFormSchema = z.object({
+  name: z.string().min(1, "Customer name is required"),
   isActive: z.boolean().default(true),
 });
 
-// Create organization form schema
-const createOrganizationFormSchema = z.object({
-  name: z.string().min(1, "Organization name is required"),
+// Create customer form schema
+const createCustomerFormSchema = z.object({
+  name: z.string().min(1, "Customer name is required"),
   isActive: z.boolean().default(true),
 });
 
@@ -92,27 +92,27 @@ export default function SettingsPage() {
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  // Create organization form
-  const createOrganizationForm = useForm<z.infer<typeof createOrganizationFormSchema>>({
-    resolver: zodResolver(createOrganizationFormSchema),
+  // Create customer form
+  const createCustomerForm = useForm<z.infer<typeof createCustomerFormSchema>>({
+    resolver: zodResolver(createCustomerFormSchema),
     defaultValues: {
       name: "",
       isActive: true,
     },
   });
   
-  // Fetch organization data
-  const { data: organization } = useQuery<Organization>({
-    queryKey: ["/api/organizations", currentOrganization?.id],
-    enabled: !!currentOrganization?.id,
+  // Fetch customer data
+  const { data: customer } = useQuery<Customer>({
+    queryKey: ["/api/customers", currentCustomer?.id],
+    enabled: !!currentCustomer?.id,
   });
 
-  // Organization form
-  const organizationForm = useForm<z.infer<typeof organizationFormSchema>>({
-    resolver: zodResolver(organizationFormSchema),
+  // Customer form
+  const customerForm = useForm<z.infer<typeof customerFormSchema>>({
+    resolver: zodResolver(customerFormSchema),
     defaultValues: {
-      name: currentOrganization?.name || "",
-      isActive: currentOrganization?.isActive,
+      name: currentCustomer?.name || "",
+      isActive: currentCustomer?.isActive,
     },
   });
 
@@ -136,44 +136,44 @@ export default function SettingsPage() {
     },
   });
 
-  // Update organization details when they change
+  // Update customer details when they change
   useState(() => {
-    if (currentOrganization) {
-      organizationForm.reset({
-        name: currentOrganization.name,
-        isActive: currentOrganization.isActive,
+    if (currentCustomer) {
+      customerForm.reset({
+        name: currentCustomer.name,
+        isActive: currentCustomer.isActive,
       });
     }
   });
 
-  // Update organization mutation
-  const updateOrganizationMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof organizationFormSchema>) => {
-      if (!currentOrganization) throw new Error("No organization selected");
+  // Update customer mutation
+  const updateCustomerMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof customerFormSchema>) => {
+      if (!currentCustomer) throw new Error("No customer selected");
       
-      const res = await apiRequest("PUT", `/api/organizations/${currentOrganization.id}`, data);
+      const res = await apiRequest("PUT", `/api/customers/${currentCustomer.id}`, data);
       return await res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations", currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", currentCustomer?.id] });
       
-      // Update the current organization in context
-      if (currentOrganization) {
-        setCurrentOrganization({
-          ...currentOrganization,
+      // Update the current customer in context
+      if (currentCustomer) {
+        setCurrentCustomer({
+          ...currentCustomer,
           ...data,
         });
       }
       
       toast({
-        title: "Organization updated",
-        description: "The organization details have been updated successfully.",
+        title: "Customer updated",
+        description: "The customer details have been updated successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to update organization",
+        title: "Failed to update customer",
         description: error.message,
         variant: "destructive",
       });
@@ -233,25 +233,25 @@ export default function SettingsPage() {
     },
   });
 
-  // Delete organization mutation
-  const deleteOrganizationMutation = useMutation({
+  // Delete customer mutation
+  const deleteCustomerMutation = useMutation({
     mutationFn: async () => {
-      if (!currentOrganization) throw new Error("No organization selected");
+      if (!currentCustomer) throw new Error("No customer selected");
       
-      await apiRequest("DELETE", `/api/organizations/${currentOrganization.id}`);
+      await apiRequest("DELETE", `/api/customers/${currentCustomer.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       setIsDeleteDialogOpen(false);
       
       toast({
-        title: "Organization deleted",
-        description: "The organization has been deleted successfully.",
+        title: "Customer deleted",
+        description: "The customer has been deleted successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to delete organization",
+        title: "Failed to delete customer",
         description: error.message,
         variant: "destructive",
       });
@@ -259,8 +259,8 @@ export default function SettingsPage() {
   });
 
   // Form submission handlers
-  const onOrganizationSubmit = (data: z.infer<typeof organizationFormSchema>) => {
-    updateOrganizationMutation.mutate(data);
+  const onCustomerSubmit = (data: z.infer<typeof customerFormSchema>) => {
+    updateCustomerMutation.mutate(data);
   };
 
   const onAccountSubmit = (data: z.infer<typeof accountFormSchema>) => {
@@ -282,7 +282,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="account" className="space-y-6">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="organization">Organization</TabsTrigger>
+          <TabsTrigger value="customer">Customer</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
         </TabsList>
         
@@ -435,15 +435,15 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
         
-        {/* Organization Settings */}
-        <TabsContent value="organization" className="space-y-6">
+        {/* Customer Settings */}
+        <TabsContent value="customer" className="space-y-6">
           {!hasManagePermission ? (
             <Card>
               <CardContent className="pt-6 flex flex-col items-center justify-center h-64">
                 <Lock className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Access Restricted</h3>
                 <p className="text-center text-muted-foreground">
-                  You don't have permission to modify organization settings. Only administrators and managers can manage organizations.
+                  You don't have permission to modify customer settings. Only administrators and managers can manage customers.
                 </p>
               </CardContent>
             </Card>
