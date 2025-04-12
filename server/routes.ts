@@ -948,22 +948,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Tokens
   app.get("/api/api-tokens", requireRole(["admin", "manager"]), async (req, res) => {
     try {
-      let tokens;
-      const orgId = req.query.organizationId ? parseInt(req.query.organizationId as string) : undefined;
+      let tokens = [];
+      const customerId = req.query.customerId ? req.query.customerId as string : undefined;
       
-      if (orgId) {
-        tokens = await storage.getApiTokensByOrganization(orgId);
+      if (customerId) {
+        // Get tokens for specific customer
+        tokens = await storage.getApiTokensByCustomer(customerId);
       } else if (req.user?.role === "admin") {
         // Admins can see all tokens
-        const allOrgs = await storage.getOrganizations();
-        tokens = await Promise.all(
-          allOrgs.map(org => storage.getApiTokensByOrganization(org.id))
-        ).then(results => results.flat());
+        const allCustomers = await storage.getCustomers();
+        const tokenArrays = await Promise.all(
+          allCustomers.map(customer => storage.getApiTokensByCustomer(customer.id))
+        );
+        tokens = tokenArrays.flat();
       } else {
-        // Others can only see tokens for their organization
-        tokens = req.user?.organizationId 
-          ? await storage.getApiTokensByOrganization(req.user.organizationId)
-          : [];
+        // Others can only see tokens for customers they have access to
+        const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+        if (userCustomers.length > 0) {
+          const tokenArrays = await Promise.all(
+            userCustomers.map(customer => storage.getApiTokensByCustomer(customer.id))
+          );
+          tokens = tokenArrays.flat();
+        }
       }
       
       // Return full tokens (client will handle masking for display)
@@ -987,12 +993,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Required fields
         name: req.body.name || "Unnamed Token",
         token: tokenValue,
-        organizationId: req.body.organizationId || "1",
         role: req.body.role || "readonly",
         createdBy: req.user?.id || "1",
         
         // Optional fields
         isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        
+        // Customer access - new field in customer-based model
+        customerIds: req.body.customerIds || [],
+        
         permissions: [] // Will be populated in storage.ts
       };
       
