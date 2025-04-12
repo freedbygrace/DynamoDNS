@@ -92,10 +92,14 @@ export default function DomainsPage() {
   // Add domain mutation
   const addDomainMutation = useMutation({
     mutationFn: async (data: z.infer<typeof domainFormSchema>) => {
+      if (!currentCustomer?.id) {
+        throw new Error("No customer selected");
+      }
+
       // Prepare domain data with customerId
       const domainData: InsertDomain = {
         ...data,
-        customerId: currentCustomer?.id || "",
+        customerId: currentCustomer.id,
       };
       
       // Add special handling for providerId
@@ -106,6 +110,7 @@ export default function DomainsPage() {
       }
       
       console.log("Submitting domain with provider:", domainData.providerId);
+      console.log("Customer ID:", domainData.customerId);
       
       const res = await apiRequest("POST", "/api/domains", domainData);
       return await res.json();
