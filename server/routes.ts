@@ -677,6 +677,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legacy endpoint for backward compatibility
+  app.get("/api/organizations", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get all customers
+  app.get("/api/customers", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Delete a customer
   app.delete("/api/customers/:id", requireRole(["admin"]), async (req, res) => {
     try {
       const deleted = await storage.deleteCustomer(req.params.id);
@@ -685,20 +708,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer not found" });
       }
       
-      // For backward compatibility - maintain the old API endpoints
-      app.get("/api/organizations", requireRole(["admin", "manager", "user", "readonly"]), async (req, res) => {
-        try {
-          const customers = await storage.getCustomers();
-          res.json(customers);
-        } catch (error) {
-          console.error("Error fetching organizations (customers):", error);
-          res.status(500).json({ message: "Internal server error" });
-        }
-      });
-      
       res.status(204).end();
     } catch (error) {
-      console.error("Error deleting organization:", error);
+      console.error("Error deleting customer:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1133,9 +1145,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "API token not found" });
       }
       
-      // Verify permission: only admin can modify any token, managers can only modify their org's tokens
-      if (req.user?.role !== "admin" && token.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Insufficient permissions" });
+      // Verify permission: admins can modify any token, managers can only modify tokens for customers they have access to
+      if (req.user?.role !== "admin") {
+        // Get the customers the user has access to
+        const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Get the customers this token has access to
+        const tokenCustomerAccess = await storage.getApiTokenCustomerAccess(token.id);
+        const tokenCustomerIds = tokenCustomerAccess.map(a => a.customerId);
+        
+        // Check if user has access to any of the same customers as the token
+        const hasAccess = tokenCustomerIds.some(id => userCustomerIds.includes(id));
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
       }
       
       // Validate permissions
@@ -1182,9 +1207,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "API token not found" });
       }
       
-      // Verify permission: only admin can modify any token, managers can only modify their org's tokens
-      if (req.user?.role !== "admin" && token.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Insufficient permissions" });
+      // Verify permission: admins can modify any token, managers can only modify tokens for customers they have access to
+      if (req.user?.role !== "admin") {
+        // Get the customers the user has access to
+        const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Get the customers this token has access to
+        const tokenCustomerAccess = await storage.getApiTokenCustomerAccess(token.id);
+        const tokenCustomerIds = tokenCustomerAccess.map(a => a.customerId);
+        
+        // Check if user has access to any of the same customers as the token
+        const hasAccess = tokenCustomerIds.some(id => userCustomerIds.includes(id));
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
       }
       
       // For PATCH, we'll allow a simpler validation specifically for isActive status changes
@@ -1226,9 +1264,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "API token not found" });
       }
       
-      // Verify permission: only admin can delete any token, managers can only delete their org's tokens
-      if (req.user?.role !== "admin" && token.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Insufficient permissions" });
+      // Verify permission: admins can delete any token, managers can only delete tokens for customers they have access to
+      if (req.user?.role !== "admin") {
+        // Get the customers the user has access to
+        const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Get the customers this token has access to
+        const tokenCustomerAccess = await storage.getApiTokenCustomerAccess(token.id);
+        const tokenCustomerIds = tokenCustomerAccess.map(a => a.customerId);
+        
+        // Check if user has access to any of the same customers as the token
+        const hasAccess = tokenCustomerIds.some(id => userCustomerIds.includes(id));
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
       }
       
       const deleted = await storage.deleteApiToken(id);
@@ -1378,26 +1429,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
       
-      let webhooks;
-      const orgId = req.query.organizationId as string;
+      let webhooks = [];
+      const customerId = req.query.customerId as string;
       
-      if (orgId) {
-        // For specific organization, check if user belongs to that org
-        if (userRole !== "admin" && req.user?.organizationId !== orgId) {
-          return res.status(403).json({ message: "Insufficient permissions" });
+      if (customerId) {
+        // For specific customer, check if user has access to that customer
+        if (userRole !== "admin") {
+          const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+          const userCustomerIds = userCustomers.map(c => c.id);
+          
+          if (!userCustomerIds.includes(customerId)) {
+            return res.status(403).json({ message: "Insufficient permissions" });
+          }
         }
-        webhooks = await storage.getWebhooksByOrganization(orgId);
+        
+        webhooks = await storage.getWebhooksByCustomer(customerId);
       } else if (userRole === "admin") {
         // Admins can see all webhooks
-        const allOrgs = await storage.getOrganizations();
-        webhooks = await Promise.all(
-          allOrgs.map(org => storage.getWebhooksByOrganization(org.id))
-        ).then(results => results.flat());
+        const allCustomers = await storage.getCustomers();
+        const webhookArrays = await Promise.all(
+          allCustomers.map(customer => storage.getWebhooksByCustomer(customer.id))
+        );
+        webhooks = webhookArrays.flat();
       } else {
-        // Others can only see webhooks for their organization
-        webhooks = req.user?.organizationId 
-          ? await storage.getWebhooksByOrganization(req.user.organizationId)
-          : [];
+        // Others can only see webhooks for customers they have access to
+        const userCustomers = await storage.getUserCustomers(req.user?.id || "");
+        
+        if (userCustomers.length > 0) {
+          const webhookArrays = await Promise.all(
+            userCustomers.map(customer => storage.getWebhooksByCustomer(customer.id))
+          );
+          webhooks = webhookArrays.flat();
+        }
       }
       
       res.json(webhooks);
