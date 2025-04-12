@@ -1542,9 +1542,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Webhook not found" });
       }
       
-      // Check authorization
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to test this webhook" });
+      // Check authorization for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to test this webhook" });
+        }
       }
       
       const testPayload = {
@@ -1584,9 +1591,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Webhook not found" });
       }
       
-      // Permission check: admin can view all logs, others only for their organization's webhooks
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to access logs for this webhook" });
+      // Permission check: admin can view all logs, others only for their customer's webhooks
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to access logs for this webhook" });
+        }
       }
       
       try {
@@ -1620,9 +1634,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Associated webhook not found" });
       }
       
-      // Permission check
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to access this log" });
+      // Permission check for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to access this log" });
+        }
       }
       
       res.json(log);
@@ -1648,9 +1669,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Associated webhook not found" });
       }
       
-      // Permission check
-      if (req.user?.role !== "admin" && webhook.organizationId !== req.user?.organizationId) {
-        return res.status(403).json({ message: "Not authorized to retry this webhook" });
+      // Permission check for non-admin users
+      if (req.user?.role !== "admin") {
+        // Get user's customers
+        const userCustomers = await storage.getUserCustomers(req.user?.id as string);
+        const userCustomerIds = userCustomers.map(c => c.id);
+        
+        // Check if the user has access to the webhook's customer
+        if (!userCustomerIds.includes(webhook.customerId)) {
+          return res.status(403).json({ message: "Not authorized to retry this webhook" });
+        }
       }
       
       // Only retry failed deliveries
