@@ -342,9 +342,9 @@ export class MemStorage implements IStorage {
     return this.domainsMap.get(parseInt(id));
   }
   
-  async getDomainsByOrganization(organizationId: string): Promise<Domain[]> {
+  async getDomainsByCustomer(customerId: string): Promise<Domain[]> {
     return Array.from(this.domainsMap.values())
-      .filter(domain => domain.organizationId === organizationId);
+      .filter(domain => domain.customerId === customerId);
   }
   
   async getAllDomains(): Promise<Domain[]> {
@@ -358,7 +358,7 @@ export class MemStorage implements IStorage {
     const newDomain: Domain = { 
       id: numId.toString(),
       name: domain.name,
-      organizationId: domain.organizationId!,
+      customerId: domain.customerId,
       providerId: domain.providerId || "1", // Default to the first provider if not specified
       isActive: domain.isActive ?? true,
       lastUpdated,
@@ -502,9 +502,15 @@ export class MemStorage implements IStorage {
       .find(apiToken => apiToken.token === token);
   }
   
-  async getApiTokensByOrganization(organizationId: string): Promise<ApiToken[]> {
+  async getApiTokensByCustomer(customerId: string): Promise<ApiToken[]> {
+    // Get all token-customer access records for this customer
+    const customerAccess = Array.from(this.apiTokenCustomerAccessMap.values())
+      .filter(access => access.customerId === customerId);
+    
+    // Get the tokens with access to this customer
+    const tokenIds = customerAccess.map(access => access.tokenId);
     return Array.from(this.apiTokensMap.values())
-      .filter(token => token.organizationId === organizationId);
+      .filter(token => tokenIds.includes(token.id));
   }
   
   async createApiToken(token: any): Promise<ApiToken> {
@@ -568,7 +574,7 @@ export class MemStorage implements IStorage {
       id: numId.toString(),
       name: token.name || "Unnamed Token",
       token: token.token || "test_token_" + numId,
-      organizationId: token.organizationId || "1",
+      customerId: token.customerId || "1",
       permissions: permissions,
       role: token.role || 'readonly',
       createdBy: token.createdBy || "1",
