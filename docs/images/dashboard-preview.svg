@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="800" height="450" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dashboard Background -->
+  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" />
+  
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="800" height="60" fill="#1e293b" />
+  <text x="30" y="38" font-family="Arial" font-size="24" font-weight="bold" fill="white">DynamoDNS</text>
+  
+  <!-- Navigation Sidebar -->
+  <rect x="0" y="60" width="200" height="390" fill="#f1f5f9" />
+  
+  <!-- Navigation Items -->
+  <rect x="10" y="80" width="180" height="40" rx="4" fill="#e2e8f0" />
+  <text x="45" y="105" font-family="Arial" font-size="14" fill="#334155">Dashboard</text>
+  
+  <text x="45" y="155" font-family="Arial" font-size="14" fill="#64748b">Domains</text>
+  <text x="45" y="195" font-family="Arial" font-size="14" fill="#64748b">DNS Records</text>
+  <text x="45" y="235" font-family="Arial" font-size="14" fill="#64748b">History</text>
+  <text x="45" y="275" font-family="Arial" font-size="14" fill="#64748b">Metrics</text>
+  <text x="45" y="315" font-family="Arial" font-size="14" fill="#64748b">Webhooks</text>
+  <text x="45" y="355" font-family="Arial" font-size="14" fill="#64748b">API Tokens</text>
+  <text x="45" y="395" font-family="Arial" font-size="14" fill="#64748b">Settings</text>
+  
+  <!-- Main Content Area -->
+  <rect x="220" y="80" width="560" height="50" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="#0f172a">DNS Overview</text>
+  
+  <!-- Statistics Cards -->
+  <rect x="220" y="150" width="170" height="100" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="180" font-family="Arial" font-size="14" fill="#64748b">Total Domains</text>
+  <text x="240" y="215" font-family="Arial" font-size="24" font-weight="bold" fill="#0f172a">24</text>
+  
+  <rect x="410" y="150" width="170" height="100" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="430" y="180" font-family="Arial" font-size="14" fill="#64748b">DNS Records</text>
+  <text x="430" y="215" font-family="Arial" font-size="24" font-weight="bold" fill="#0f172a">186</text>
+  
+  <rect x="600" y="150" width="170" height="100" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="620" y="180" font-family="Arial" font-size="14" fill="#64748b">Updates Today</text>
+  <text x="620" y="215" font-family="Arial" font-size="24" font-weight="bold" fill="#0f172a">42</text>
+  
+  <!-- Charts -->
+  <rect x="220" y="270" width="350" height="160" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="300" font-family="Arial" font-size="14" font-weight="bold" fill="#0f172a">DNS Updates Over Time</text>
+  
+  <!-- Simple line chart -->
+  <polyline points="240,380 270,360 300,370 330,350 360,330 390,345 420,320 450,310 480,330 510,290 540,300" 
+            fill="none" stroke="#3b82f6" stroke-width="2" />
+            
+  <!-- X and Y axis -->
+  <line x1="240" y1="380" x2="540" y2="380" stroke="#94a3b8" stroke-width="1" />
+  <line x1="240" y1="380" x2="240" y2="300" stroke="#94a3b8" stroke-width="1" />
+  
+  <!-- Recent Activity -->
+  <rect x="590" y="270" width="180" height="160" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="610" y="300" font-family="Arial" font-size="14" font-weight="bold" fill="#0f172a">Recent Activity</text>
+  
+  <text x="610" y="330" font-family="Arial" font-size="12" fill="#64748b">example.com: A record updated</text>
+  <text x="610" y="350" font-family="Arial" font-size="12" fill="#64748b">dev.site.io: MX record added</text>
+  <text x="610" y="370" font-family="Arial" font-size="12" fill="#64748b">api.example.org: CNAME updated</text>
+  <text x="610" y="390" font-family="Arial" font-size="12" fill="#64748b">myapp.com: TXT record added</text>
+</svg>
