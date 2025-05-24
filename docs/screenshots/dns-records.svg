@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="800" height="450" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" />
+  
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="800" height="60" fill="#1e293b" />
+  <text x="30" y="38" font-family="Arial" font-size="24" font-weight="bold" fill="white">DynamoDNS</text>
+  
+  <!-- User Menu -->
+  <text x="750" y="38" font-family="Arial" font-size="14" fill="white" text-anchor="end">Admin ▼</text>
+  
+  <!-- Customer Selector -->
+  <rect x="300" y="15" width="200" height="30" rx="4" fill="#334155" />
+  <text x="320" y="35" font-family="Arial" font-size="14" fill="white">Acme Corporation ▼</text>
+  
+  <!-- Navigation Sidebar -->
+  <rect x="0" y="60" width="200" height="390" fill="#f1f5f9" />
+  
+  <!-- Navigation Items -->
+  <text x="45" y="105" font-family="Arial" font-size="14" fill="#64748b">Dashboard</text>
+  <text x="45" y="155" font-family="Arial" font-size="14" fill="#64748b">Domains</text>
+  
+  <rect x="10" y="170" width="180" height="40" rx="4" fill="#e2e8f0" />
+  <text x="45" y="195" font-family="Arial" font-size="14" fill="#334155">DNS Records</text>
+  
+  <text x="45" y="235" font-family="Arial" font-size="14" fill="#64748b">History</text>
+  <text x="45" y="275" font-family="Arial" font-size="14" fill="#64748b">Metrics</text>
+  <text x="45" y="315" font-family="Arial" font-size="14" fill="#64748b">Webhooks</text>
+  <text x="45" y="355" font-family="Arial" font-size="14" fill="#64748b">API Tokens</text>
+  <text x="45" y="395" font-family="Arial" font-size="14" fill="#64748b">Settings</text>
+  
+  <!-- Main Content Area - Page Header -->
+  <rect x="220" y="80" width="560" height="50" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="#0f172a">DNS Records</text>
+  
+  <!-- Filter Controls -->
+  <rect x="500" y="90" width="140" height="30" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+  <text x="515" y="110" font-family="Arial" font-size="12" fill="#64748b">Domain: example.com ▼</text>
+  
+  <rect x="650" y="90" width="110" height="30" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+  <text x="665" y="110" font-family="Arial" font-size="12" fill="#64748b">Type: All ▼</text>
+  
+  <!-- Add Record Button -->
+  <rect x="650" y="150" width="130" height="30" rx="4" fill="#2563eb" />
+  <text x="680" y="170" font-family="Arial" font-size="12" fill="white">+ Add Record</text>
+  
+  <!-- Records Table -->
+  <rect x="220" y="150" width="560" height="280" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  
+  <!-- Table Header -->
+  <rect x="220" y="150" width="560" height="40" rx="6" fill="#f8fafc" />
+  <text x="240" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">Name</text>
+  <text x="340" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">Type</text>
+  <text x="390" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">Content</text>
+  <text x="550" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">TTL</text>
+  <text x="600" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">Status</text>
+  <text x="700" y="175" font-family="Arial" font-size="12" font-weight="bold" fill="#64748b">Actions</text>
+  
+  <!-- Table Rows -->
+  <!-- Row 1 -->
+  <line x1="220" y1="190" x2="780" y2="190" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="215" font-family="Arial" font-size="12" fill="#0f172a">@</text>
+  <text x="340" y="215" font-family="Arial" font-size="12" fill="#0f172a">A</text>
+  <text x="390" y="215" font-family="Arial" font-size="12" fill="#0f172a">34.105.45.38</text>
+  <text x="550" y="215" font-family="Arial" font-size="12" fill="#0f172a">3600</text>
+  <circle cx="600" cy="210" r="5" fill="#22c55e" />
+  <text x="615" y="215" font-family="Arial" font-size="12" fill="#0f172a">Active</text>
+  <text x="700" y="215" font-family="Arial" font-size="12" fill="#3b82f6">Edit</text>
+  <text x="730" y="215" font-family="Arial" font-size="12" fill="#ef4444">Delete</text>
+  
+  <!-- Row 2 -->
+  <line x1="220" y1="230" x2="780" y2="230" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="255" font-family="Arial" font-size="12" fill="#0f172a">www</text>
+  <text x="340" y="255" font-family="Arial" font-size="12" fill="#0f172a">CNAME</text>
+  <text x="390" y="255" font-family="Arial" font-size="12" fill="#0f172a">example.com</text>
+  <text x="550" y="255" font-family="Arial" font-size="12" fill="#0f172a">3600</text>
+  <circle cx="600" cy="250" r="5" fill="#22c55e" />
+  <text x="615" y="255" font-family="Arial" font-size="12" fill="#0f172a">Active</text>
+  <text x="700" y="255" font-family="Arial" font-size="12" fill="#3b82f6">Edit</text>
+  <text x="730" y="255" font-family="Arial" font-size="12" fill="#ef4444">Delete</text>
+  
+  <!-- Row 3 -->
+  <line x1="220" y1="270" x2="780" y2="270" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="295" font-family="Arial" font-size="12" fill="#0f172a">api</text>
+  <text x="340" y="295" font-family="Arial" font-size="12" fill="#0f172a">A</text>
+  <text x="390" y="295" font-family="Arial" font-size="12" fill="#0f172a">34.107.43.22</text>
+  <text x="550" y="295" font-family="Arial" font-size="12" fill="#0f172a">3600</text>
+  <circle cx="600" cy="290" r="5" fill="#22c55e" />
+  <text x="615" y="295" font-family="Arial" font-size="12" fill="#0f172a">Active</text>
+  <text x="700" y="295" font-family="Arial" font-size="12" fill="#3b82f6">Edit</text>
+  <text x="730" y="295" font-family="Arial" font-size="12" fill="#ef4444">Delete</text>
+  
+  <!-- Row 4 -->
+  <line x1="220" y1="310" x2="780" y2="310" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="335" font-family="Arial" font-size="12" fill="#0f172a">@</text>
+  <text x="340" y="335" font-family="Arial" font-size="12" fill="#0f172a">MX</text>
+  <text x="390" y="335" font-family="Arial" font-size="12" fill="#0f172a">mail.example.com</text>
+  <text x="550" y="335" font-family="Arial" font-size="12" fill="#0f172a">3600</text>
+  <circle cx="600" cy="330" r="5" fill="#22c55e" />
+  <text x="615" y="335" font-family="Arial" font-size="12" fill="#0f172a">Active</text>
+  <text x="700" y="335" font-family="Arial" font-size="12" fill="#3b82f6">Edit</text>
+  <text x="730" y="335" font-family="Arial" font-size="12" fill="#ef4444">Delete</text>
+  
+  <!-- Row 5 -->
+  <line x1="220" y1="350" x2="780" y2="350" stroke="#e2e8f0" stroke-width="1" />
+  <text x="240" y="375" font-family="Arial" font-size="12" fill="#0f172a">_dmarc</text>
+  <text x="340" y="375" font-family="Arial" font-size="12" fill="#0f172a">TXT</text>
+  <text x="390" y="375" font-family="Arial" font-size="12" fill="#0f172a">v=DMARC1; p=reject; ...</text>
+  <text x="550" y="375" font-family="Arial" font-size="12" fill="#0f172a">3600</text>
+  <circle cx="600" cy="370" r="5" fill="#f97316" />
+  <text x="615" y="375" font-family="Arial" font-size="12" fill="#0f172a">Updating</text>
+  <text x="700" y="375" font-family="Arial" font-size="12" fill="#3b82f6">Edit</text>
+  <text x="730" y="375" font-family="Arial" font-size="12" fill="#ef4444">Delete</text>
+  
+  <!-- Pagination -->
+  <text x="240" y="415" font-family="Arial" font-size="12" fill="#64748b">Showing 1-5 of 12 records</text>
+  <rect x="650" y="400" width="30" height="25" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+  <text x="665" y="417" font-family="Arial" font-size="12" fill="#64748b" text-anchor="middle">1</text>
+  
+  <rect x="685" y="400" width="30" height="25" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="700" y="417" font-family="Arial" font-size="12" fill="#64748b" text-anchor="middle">2</text>
+  
+  <rect x="720" y="400" width="30" height="25" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  <text x="735" y="417" font-family="Arial" font-size="12" fill="#64748b" text-anchor="middle">3</text>
+</svg>
